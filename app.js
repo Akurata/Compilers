@@ -21,7 +21,7 @@ app.use((req, res, next) => {
 
 
 app.get('/', (req, res) => {
-  res.send('Compilers Primary Endpoint');
+  res.sendFile(path.resolve('views/html/index.html'));
 });
 
 
