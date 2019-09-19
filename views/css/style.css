@@ -38,8 +38,16 @@ a:hover {
   transition: all 0.5s ease-in-out;
 }
 
-textarea {
+textarea.form-control {
   resize: none;
+  height: 55vh;
+}
+
+.compile_btn {
+  position: absolute;
+  right: 0px;
+  bottom: 0px;
+  font-size: initial;
 }
 
 .p-r {
