@@ -145,7 +145,7 @@ function lexer(input) {
 
 var tokens = [];
 function createToken(bestCandidate) {
-  output(`\tDEBUG LEXER - ${lexer_index[bestCandidate.value]} found at (${bestCandidate.row}:${bestCandidate.col})`)
+  output(`\tDEBUG LEXER - ${lexer_index[bestCandidate.value] || `CHAR [${bestCandidate.value}]`} found at (${bestCandidate.row}:${bestCandidate.col})`)
   console.log(bestCandidate);
 }
 
