@@ -1,8 +1,8 @@
 
-var lexer_syntax = {
+var lexer_syntax = { //Predefined syntax for regex matching
   keywords: {
     priority: 5,
-    values: /\b^print$|\b^while$|\b^if$|\b^int$|\b^string$|\b^boolean$|\b^false$|\b^true$|\b^==$|\b^!=$/g
+    values: /\b^print$|\b^while$|\b^if$|\b^int$|\b^string$|\b^boolean$|\b^false$|\b^true$|^={2}$|^\!\=$/g
   },
   id: {
     priority: 4,
@@ -22,17 +22,18 @@ var lexer_syntax = {
   },
   comment: {
     priority: 0,
-    values: /(\/\*).+(\*\/)$/g
+    values: /(\/\*)(.)+(\*\/)$/sg
   }
 }
 
-var lexer_index = {
-  'print': 'PrintStatement',
-  'while': 'WhileStatement',
-  'if': 'IfStatement',
+var lexer_index = { //Index for token generateion + output
+  'print': 'Print_Statement',
+  'while': 'While_Statement',
+  'if': 'If_Statement',
   '(': 'L_PAREN',
   ')': 'R_PAREN',
   '"': 'QUOTE',
+  '+': 'PLUS',
   '*': 'ASTERISK',
   '=': 'ASSIGN_OP',
   '==': 'IS_EQUAL',
@@ -40,6 +41,8 @@ var lexer_index = {
   'int': 'INT_DECL',
   'string': 'STRING_DECL',
   'boolean': 'BOOL_DECL',
+  'true': 'BOOL_TRUE',
+  'false': 'BOOL_FALSE',
   '\n': 'WHITESPACE',
   '{': 'L_BRACE',
   '}': 'R_BRACE',
@@ -49,16 +52,11 @@ var lexer_index = {
 
 
 
-
 function lexer(input) {
   document.querySelector('#output').innerHTML = ''; //Clear Output
-  var err = [];
+  input = input.toLowerCase(); //Uniform formatting
 
-  console.log(input)
-  input = input.toLowerCase();
-  //input = input.replace(/\s/g, '');
-
-  var bestCandidate = {
+  var bestCandidate = { //Set default best candidate
     priority: -1,
     value: '',
     col: 0,
@@ -68,37 +66,30 @@ function lexer(input) {
 
   var programs = [];
   var temp = input.split('$'); //Divide up the programs
-  console.log(temp)
-  temp.forEach((t, i) => {
+  temp.forEach((t, i) => { //Add EOP[$] since js string.split emilinated teh delimiter
     if(t != '') {
       t += '$';
       programs.push(t);
     }
   });
-  console.log(programs)
 
   var row = 0;
   programs.forEach((p, id) => {
-    var start = 0;
+    var start = 0; //Current position when generating string for best candidate
     var end = 0;
     var col = 0;
     var currentString;
 
-
-
-    console.log('PROGRAM: ' + id)
     output(`INFO LEXER - Lexing program ${id}...`);
     while(start < p.length) {
-      if(p[start] == '\n') {
-        //console.log(`WHITESPACE at ${row}`);
+      if(p[start] == '\n') { //If identified white space, increment the row count
         row++;
         col = 0;
         end++;
       }else {
         while(end <= p.length) {
-          currentString = p.substring(start, end+1);
-          console.log(currentString)
-
+          currentString = p.substring(start, end+1); //Create string to compare against indexed rules
+          //console.log(currentString)
           var didUpdate = false;
           Object.keys(lexer_syntax).forEach((key) => {
             if(currentString.match(lexer_syntax[key].values)) { //If a pattern is identified
@@ -109,26 +100,22 @@ function lexer(input) {
                 bestCandidate.row = row;
                 bestCandidate.endIndex = end;
                 didUpdate = true;
-
               }
             }
           });
-          if(didUpdate) {
+          if(didUpdate) { //If there was an update to bestCandidate, that means all subsets of the candidate are not as prioritized
             start = bestCandidate.endIndex;
           }
           end++;
         }
         col++;
-        if(bestCandidate.priority > 0) {
+        if(bestCandidate.priority > 0) { //Generate token based on complete identifiable rule.
           createToken(bestCandidate);
         }
 
-
       }
       start++; //Start looking for new keyphrase
-      //start = bestCandidate.endIndex;
       end = start;
-      //start = end;
       bestCandidate = { //Reset bestCandidate
         priority: -1,
         value: '',
@@ -137,25 +124,22 @@ function lexer(input) {
         endIndex: 0
       }
     }
-
   });
-
-
 }
 
 var tokens = [];
 function createToken(bestCandidate) {
-  output(`\tDEBUG LEXER - ${lexer_index[bestCandidate.value] || `CHAR [${bestCandidate.value}]`} found at (${bestCandidate.row}:${bestCandidate.col})`)
-  console.log(bestCandidate);
+  var val = `   DEBUG LEXER - ${lexer_index[bestCandidate.value] ? `${lexer_index[bestCandidate.value]} [ ${bestCandidate.value} ]` : `CHAR [ ${bestCandidate.value} ]`} found at (${bestCandidate.row}:${bestCandidate.col})`
+  tokens.push(val);
+  output(val);
+  //console.log(bestCandidate);
 }
 
-
-function output(info) {
+function output(info) { //Print to screen
   document.querySelector('#output').innerHTML += `\n${info}`;
 }
 
-
-function start() {
+function start() { //Initialize with example programs
   document.querySelector('#input').value = "{}$\n\n{{{{{{}}}}}}$\n\n{{{{{{}}} /* comments are ignored */ }}}}$\n\n{ /* comments	are	still	ignored	*/ int @}$\n\n{\nint a\na = a\nstring b\na = b\n}$"
 }
 start();

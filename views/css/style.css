@@ -41,6 +41,7 @@ a:hover {
 textarea.form-control {
   resize: none;
   height: 55vh;
+  width: 100%;
 }
 
 .compile_btn {
