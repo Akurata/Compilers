@@ -6,7 +6,7 @@ var lexer_syntax = { //Predefined syntax for regex matching
   },
   id: {
     priority: 4,
-    values: /^[A-z]{1}$/
+    values: /^[a-z]{1}$/
   },
   symbol: {
     priority: 3,
@@ -18,7 +18,7 @@ var lexer_syntax = { //Predefined syntax for regex matching
   },
   char: {
     priority: 1,
-    values: /^[A-z]$/
+    values: /^[a-z]$/
   },
   comment: {
     priority: 0,
@@ -54,9 +54,10 @@ var lastToken = {};
 
 function lexer(input) {
   document.querySelector('#output').innerHTML = ''; //Clear Output
-  input = input.toLowerCase(); //Uniform formatting
+  //input = input.toLowerCase(); //Uniform formatting
 
   var bestCandidate = { //Set default best candidate
+    key: null,
     priority: -1,
     value: '',
     col: 0,
@@ -78,37 +79,48 @@ function lexer(input) {
     var start = 0; //Current position when generating string for best candidate
     var end = 0;
     var col = 0;
-    var currentString;
+    var currentString = '';
+    var didUpdate = false;
     var quotes = 0;
+    var error = false;
 
     output(`INFO LEXER - Lexing program ${id}...`);
-    while(start < p.length) {
+
+    while(start < p.length && !error) {
       if(p[start] == '\n') { //If identified white space, increment the row count
         row++;
         col = 0;
         end++;
       }else {
-        if(lastToken.value === '\"' && quotes%2 === 0) {
+        if(lastToken.value === '\"') {
           quotes++;
+        }
+        if(quotes > 0 && quotes%2 === 0) { //Detect and build strings
           while(p[end+1] != '\"') {
+            if(p[end] === '\n' || p[end].match(/([A-Z]|[0-9])/g)) {
+              error = true;
+              output(`ERROR LEXER - Unexpected Character [${JSON.stringify(p[end])}] at (${row}:${col})`);
+              break;
+            }
             end++;
           }
-          currentString = p.substring(start, end+1);
 
+          currentString = p.substring(start, end+1);
           bestCandidate.key = 'STRING';
           bestCandidate.priority = 1;
           bestCandidate.value = currentString;
           bestCandidate.col = col;
           bestCandidate.row = row;
           bestCandidate.endIndex = end;
+          didUpdate = true;
+
           start = end;
           end++;
+
         }else {
           while(end <= p.length) {
-            console.log(currentString);
             currentString = p.substring(start, end+1); //Create string to compare against indexed rules
-            //{print("inta")}$
-            var didUpdate = false;
+            didUpdate = false;
             Object.keys(lexer_syntax).forEach((key) => {
               if(currentString.match(lexer_syntax[key].values)) { //If a pattern is identified
                 if(bestCandidate.priority < lexer_syntax[key].priority) { //Update bestCandidate to alwasy have highest priority possible
@@ -131,15 +143,25 @@ function lexer(input) {
 
         col++;
         if(bestCandidate.priority > 0) { //Generate token based on complete identifiable rule.
-          console.log(`LAST TOKEN: ${lastToken.value}`);
+          //console.log(`LAST TOKEN: ${lastToken.value}`);
           console.log(`CURRENT TOKEN: ${bestCandidate.value}`);
-          createToken(bestCandidate);
+          if(!error) {
+            createToken(bestCandidate);
+          }
         }
-
       }
+
+      //if(!didUpdate && currentString.match(/^[A-Z]{1}/)) { //Identify errors for capital IDs
+      console.log(currentString.length, p.length - start);
+      if(!didUpdate && currentString.length >= (p.length - start)) {
+        error = true;
+        output(`ERROR LEXER - Unexpected Character [ ${currentString[0]} ] at (${row}:${col})`);
+      }
+
       start++; //Start looking for new keyphrase
       end = start;
       bestCandidate = { //Reset bestCandidate
+        key: null,
         priority: -1,
         value: '',
         col: 0,
@@ -148,11 +170,11 @@ function lexer(input) {
       }
     }
   });
+  lasToken = {};
 }
 
 var tokens = [];
 function createToken(bestCandidate) {
-  console.log(bestCandidate)
   var val = `   DEBUG LEXER - ${lexer_index[bestCandidate.value] ? `${lexer_index[bestCandidate.value]} [ ${bestCandidate.value} ]` : `${bestCandidate.key} [ ${bestCandidate.value} ]`} found at (${bestCandidate.row}:${bestCandidate.col})`
   tokens.push({
     text: val,
@@ -163,7 +185,6 @@ function createToken(bestCandidate) {
   });
   lastToken = tokens[tokens.length-1];
   output(val);
-  console.log(bestCandidate);
 }
 
 function output(info) { //Print to screen
@@ -171,6 +192,7 @@ function output(info) { //Print to screen
 }
 
 function start() { //Initialize with example programs
-  document.querySelector('#input').value = "{}$\n\n{{{{{{}}}}}}$\n\n{{{{{{}}} /* comments are ignored */ }}}}$\n\n{ /* comments	are	still	ignored	*/ int @}$\n\n{\nint a\na = a\nstring b\na = b\n}$"
+  //document.querySelector('#input').value = "{}$\n\n{{{{{{}}}}}}$\n\n{{{{{{}}} /* comments are ignored */ }}}}$\n\n{ /* comments	are	still	ignored	*/ int @}$\n\n{\nint a\na = a\nstring b\na = b\n}$"
+  document.querySelector('#input').value = "{\n~@#%^&*_+{}|:<>?[];',./\nbool ean d\n}$";
 }
 start();
