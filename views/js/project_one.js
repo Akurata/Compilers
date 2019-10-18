@@ -86,10 +86,12 @@ function lexer(input) {
     output(`${id > 0 ? '\n' : ''}INFO LEXER - Lexing program ${id}...`);
     console.log(`${id > 0 ? '\n' : ''}INFO LEXER - Lexing program ${id}...`);
     console.log(parseInt(p[start]) || p[start].match(/\s/), row)
+    console.log(p)
+    console.log(p.split(/\r\n|\r|\n/).length)
 
     while(start < p.length && !error) {
 
-      if(p[start].match(/\s/)) { //If identified white space, increment the row count
+      if(p[start].match(/\r|\n/)) { //If identified white space, increment the row count
         row++;
         col = 0;
         end++;
@@ -142,8 +144,9 @@ function lexer(input) {
               end++;
             }
           }
+
           col += bestCandidate.value.length;
-          console.log(col)
+          //console.log(col)
           //col++;
           //col = start;
 
@@ -156,15 +159,15 @@ function lexer(input) {
             var errorChar;
             for(var i = 0; i < currentString.length; i++) {
               if(!currentString[i].match(/\s/)) {
+
                 output(`ERROR LEXER - Unexpected Character [ ${currentString[i]} ] at (${row}:${col+i}) via 160`);
+                console.log(JSON.stringify(currentString), currentString.split(/\n/).length - 1)
+                row += currentString.split(/\n/).length - 1;
                 break;
               }
             }
-
             console.log('ERROR');
           }
-
-
       }
 
       //console.log(!didUpdate, currentString.length, (end - start), end, start, p[end], p.substring(start, end), currentString)
