@@ -10,9 +10,9 @@ function Tree() {
     // Attributes
     // ----------
 
-    this.root = null;  // Note the NULL root node of this tree.
-    this.cur = {};     // Note the EMPTY current node of the tree we're building.
-
+    this.root = {name: 'Root', children: [], parent: null};  // Note the NULL root node of this tree.
+    this.cur = this.root;     // Note the EMPTY current node of the tree we're building.
+    //name: 'root', children: [], parent: null
 
     // -- ------- --
     // -- Methods --
@@ -31,6 +31,7 @@ function Tree() {
         {
             // We are the root node.
             this.root = node;
+            this.cur = this.root;
         }
         else
         {

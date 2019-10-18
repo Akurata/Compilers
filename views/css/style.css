@@ -1290,3 +1290,13 @@ footer .credits a {
     bottom: 15px;
   }
 }
+
+
+
+
+
+
+
+.split {
+  display: flex;
+}

@@ -210,6 +210,10 @@ function outputParse(info) { //Print to screen
   document.querySelector('#output_parse').innerHTML += `\n${info}`;
 }
 
+function outputCST(info) {
+  document.querySelector('#output_cst').innerHTML += `\n${info}`;
+}
+
 function start() { //Initialize with example programs
   //document.querySelector('#input').value = "{}$\n\n{{{{{{}}}}}}$\n\n{{{{{{}}} /* comments are ignored */ }}}}$\n\n{ /* comments	are	still	ignored	*/ int @}$\n\n{\nint a\na = a\nstring b\na = b\n}$"
   document.querySelector('#input').value = "{print(a)}$";

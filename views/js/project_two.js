@@ -5,9 +5,9 @@ function cst() {
   this.current = {children: []};
 
   this.addBranch = (token) => {
-    console.log('\n');
-    console.log(token);
-    console.log('\n');
+    //console.log('\n');
+    //console.log(token);
+    //console.log('\n');
 
     var node = this.node(token);
     if(!this.root) {
@@ -32,46 +32,45 @@ function cst() {
 
 
 
+var cst = new Tree();
+
+function cstView() {
+  this.root = {name: 'Root', children: [], parent: null};
+  this.current = this.root;
+
+  this.addNode = (name) => {
+    var node = {
+      name: name,
+      children: [],
+      parent: this.current
+    }
+    this.current.children.push(node)
+  }
 
 
+}
 
+var shift = [];
 
 function matchConsume(values) {
-  console.log("MATCH:")
-  console.log(values)
   var valid = true;
 
   for(var i = 0; i < values.length; i++) {
 
-    console.log(tokenSet[0].value, (typeof values[i] === 'function') ? 'func' : values[i]);
+    //console.log(tokenSet[0].value, (typeof values[i] === 'function') ? 'func' : values[i]);
 
-    if(tokenSet[i].value.match((typeof values[i] === 'function') ? values[i]() : values[i]) && valid) {
-
+    if(tokenSet[0].value.match((typeof values[i] === 'function') ? values[i]() : values[i]) && valid) {
 
       console.log(`CONSUME - ${tokenSet[0].value}`);
 
-      //cst.addNode(n.key);
-
-
+      shift.push(tokenSet.shift());
 
     }else {
       valid = false;
       break;
     }
 
-    console.log(`Valid:${valid}`)
-  }
-
-  //Create nodes for CST
-  if(valid) {
-    for(var i = 0; i < values.length; i++) {
-      var n = tokenSet.shift();
-      if(typeof values[i] === 'function') { //make branch
-        cst.addNode(values[i].name, 'branch');
-      }else { //Make leaf
-        cast.addNode(values[i])
-      }
-    }
+    //console.log(`Valid:${valid}`)
   }
 
   return valid;
@@ -81,21 +80,24 @@ function matchConsume(values) {
 
 
 var tokenSet;
-var cst = new Tree();
+
 function parse(programTokens, p) {
+  cst = new Tree();
+  cst.addNode(`Program ${p}`, 'branch');
+
   tokenSet = programTokens;
-  console.log(programTokens);
-  console.log(tokens[p]);
-  console.log(cst);
+  //console.log(programTokens);
+  //console.log(tokens[p]);
+  //console.log(cst);
 
   outputParse(`${id > 0 ? '\n' : ''}INFO PARSER - Parsing program ${p}...`);
-  console.log(`${id > 0 ? '\n' : ''}INFO PARSER - Parsing program ${p}...`);
+  //console.log(`${id > 0 ? '\n' : ''}INFO PARSER - Parsing program ${p}...`);
 
   var check = matchConsume([program]);
-  console.log(check);
+  //console.log(check);
 
   outputParse(`INFO PARSER - Successfully completed parsing program ${p}`);
-  console.log(cst.toString())
+  outputCST(cst.toString());
 }
 
 
@@ -104,7 +106,7 @@ function parse(programTokens, p) {
 
 
 function program() {
-  console.log('PARSE PROGRAM');
+  //console.log('PARSE PROGRAM');
   outputParse(`  DEBUG PARSER - program()`);
   return matchConsume([block, '$']);
 }
@@ -113,16 +115,35 @@ function program() {
 function block() {
   console.log('PARSE BLOCK');
   outputParse(`  DEBUG PARSER - block()`);
-  return matchConsume(['{', statementList, '}']);
+  if(matchConsume(['{', statementList, '}'])) {
+    console.log('THERE IS BLOCK')
+    cst.addNode('Block', 'branch');
+    //cst.addNode('{');
+
+    //cst.addNode('StatementList', 'branch');
+    //cst.endChildren();
+
+    //cst.addNode('}');
+    //cst.endChildren();
+    return true;
+  }else {
+    return false;
+  }
+
 }
 
 
 function statementList() {
-  console.log('PARSE STATEMENT LIST');
+  //console.log('PARSE STATEMENT LIST');
   outputParse(`  DEBUG PARSER - statementList()`);
   if(matchConsume([statement, statementList])) {
-    return matchConsume([statement, statementList]);
+    console.log('THERE IS STATEMENT LIST WITH S')
+    cst.addNode('Statement', 'branch');
+    cst.addNode('StatementList', 'branch');
+    return true;
   }else {
+    console.log('THERE IS STATEMENT LIST WITH E')
+    //cst.endChildren();
     return '';
   }
 
@@ -130,7 +151,7 @@ function statementList() {
 
 
 function statement() {
-  console.log('PARSE STATEMENT');
+  //console.log('PARSE STATEMENT');
   outputParse(`  DEBUG PARSER - statement()`);
   if(matchConsume([printStatement])) {
     return true;
@@ -145,48 +166,53 @@ function statement() {
   }else if(matchConsume([block])) {
     return true;
   }else {
-    return true;
+    return false;
   }
 }
 
 
 function printStatement() {
-  console.log('PARSE PRINT STATEMENT');
+  //console.log('PARSE PRINT STATEMENT');
   outputParse(`  DEBUG PARSER - printStatement()`);
-  return matchConsume(['print', /^(\()$/, expr, /^(\))$/]);
+  if(matchConsume(['print', /^(\()$/, expr, /^(\))$/])) {
+    return true;
+  }else {
+    console.log('THERE IS NOT PRINT')
+    return false;
+  }
 }
 
 
 function assignmentStatement() {
-  console.log('PARSE ASSIGNMENT STATEMENT');
+  //console.log('PARSE ASSIGNMENT STATEMENT');
   outputParse(`  DEBUG PARSER - assignmentStatement()`);
   return matchConsume([id, /\=/, expr]);
 }
 
 
 function varDecl() {
-  console.log('PARSE VAR DECL');
+  //console.log('PARSE VAR DECL');
   outputParse(`  DEBUG PARSER - varDecl()`);
   return matchConsume([type, id]);
 }
 
 
 function whileStatement() {
-  console.log('PARSE WHILE STATEMENT');
+  //console.log('PARSE WHILE STATEMENT');
   outputParse(`  DEBUG PARSER - whileStatement()`);
   return matchConsume(['while', booleanExpr, block]);
 }
 
 
 function ifStatement() {
-  console.log('PARSE IF STATEMENT');
+  //console.log('PARSE IF STATEMENT');
   outputParse(`  DEBUG PARSER - ifStatement()`);
   return matchConsume(['if', booleanExpr, block]);
 }
 
 
 function expr() {
-  console.log('PARSE EXPR');
+  //console.log('PARSE EXPR');
   outputParse(`  DEBUG PARSER - expr()`);
   if(matchConsume([intExpr])) {
     return true;
@@ -203,7 +229,7 @@ function expr() {
 
 
 function intExpr() {
-  console.log('PARSE INT EXPR');
+  //console.log('PARSE INT EXPR');
   outputParse(`  DEBUG PARSER - intExpr()`);
   if(matchConsume([digit, intOp, expr])) {
     return true;
@@ -216,28 +242,28 @@ function intExpr() {
 
 
 function stringExpr() {
-  console.log('PARSE STRING EXPR');
+  //console.log('PARSE STRING EXPR');
   outputParse(`  DEBUG PARSER - stringExpr()`);
   return matchConsume(['\"', charList, '\"']);
 }
 
 
 function booleanExpr() {
-  console.log('PARSE BOOLEAN EXPR');
+  //console.log('PARSE BOOLEAN EXPR');
   outputParse(`  DEBUG PARSER - booleanExpr()`);
   return matchConsume([/^(\()$/, expr, /^(\))$/]);
 }
 
 
 function id() {
-  console.log('PARSE ID');
+  //console.log('PARSE ID');
   outputParse(`  DEBUG PARSER - id()`);
   return matchConsume([char]);
 }
 
 
 function charList() {
-  console.log('PARSE CHAR LIST');
+  //console.log('PARSE CHAR LIST');
   outputParse(`  DEBUG PARSER - charList()`);
   if(matchConsume([char(), charList()])) {
     return true;
@@ -250,48 +276,48 @@ function charList() {
 
 
 function type() {
-  console.log('PARSE TYPE');
+  //console.log('PARSE TYPE');
   outputParse(`  DEBUG PARSER - type()`);
   return matchConsume([/^(int|string|boolean)$/]);
 }
 
 
 function char() {
-  console.log('PARSE CHAR');
+  //console.log('PARSE CHAR');
   outputParse(`  DEBUG PARSER - char()`);
   return matchConsume([/^[a-z]$/]);
 }
 
 
 function space() {
-  console.log('PARSE SPACE');
+  //console.log('PARSE SPACE');
   outputParse(`  DEBUG PARSER - space()`);
   return matchConsume([/\s/]);
 }
 
 
 function digit() {
-  console.log('PARSE DIGIT');
+  //console.log('PARSE DIGIT');
   outputParse(`  DEBUG PARSER - digit()`);
   return matchConsume([/^[0-9]$/]);
 }
 
 
 function boolOp() {
-  console.log('PARSE BOOL OP');
+  //console.log('PARSE BOOL OP');
   outputParse(`  DEBUG PARSER - boolOp()`);
   return matchConsume([/^(==|!=)$/]);
 }
 
 function boolVal() {
-  console.log('PARSE BOOL VAL');
+  //console.log('PARSE BOOL VAL');
   outputParse(`  DEBUG PARSER - boolVal()`);
   return matchConsume([/^(false|true)$/]);
 }
 
 
 function intOp() {
-  console.log('PARSE INT OP');
+  //console.log('PARSE INT OP');
   outputParse(`  DEBUG PARSER - intOp()`);
   return matchConsume([/^\+$/]);
 }
