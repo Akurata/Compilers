@@ -49,11 +49,14 @@ var lexer_index = { //Index for token generateion + output
   '$': 'EOP'
 }
 
-
 var lastToken = {};
+var tokens = {};
 
-function lexer(input) {
-  document.querySelector('#output').innerHTML = ''; //Clear Output
+function lex(input) {
+  tokens = {};
+  lastToken = {};
+  document.querySelector('#output_lex').innerHTML = ''; //Clear Output
+  document.querySelector('#output_parse').innerHTML = ''; //Clear Output
 
   var bestCandidate = { //Set default best candidate
     key: null,
@@ -83,7 +86,7 @@ function lexer(input) {
     var quotes = 0;
     var error = false;
 
-    output(`${id > 0 ? '\n' : ''}INFO LEXER - Lexing program ${id}...`);
+    outputLex(`${id > 0 ? '\n' : ''}INFO LEXER - Lexing program ${id}...`);
     console.log(`${id > 0 ? '\n' : ''}INFO LEXER - Lexing program ${id}...`);
 
     while(start < p.length && !error) {
@@ -102,7 +105,7 @@ function lexer(input) {
               currentString = p.substring(start, end+1);
               if(p[end] === '\n' || p[end].match(/([A-Z]|[0-9])/g)) { //Catch errors in strings
                 error = true;
-                output(`ERROR LEXER - Unexpected Character [${JSON.stringify(p[end])}] at (${row}:${col}) via 102`);
+                outputLex(`ERROR LEXER - Unexpected Character [${JSON.stringify(p[end])}] at (${row}:${col}) via 105`);
                 break;
               }
               end++;
@@ -147,20 +150,16 @@ function lexer(input) {
           if(didUpdate && !error) {
             //console.log(`LAST TOKEN: ${lastToken.value}`);
             //console.log(`CURRENT TOKEN: ${bestCandidate.value}`);
-            createToken(bestCandidate);
-          }else { //Catch errors for characters/symbols that do not exist in grammar
+            createToken(bestCandidate, id);
+          }else if(!currentString[0].match(/\s/)) { //Catch errors for characters/symbols that do not exist in grammar
             error = true;
-            var errorChar;
             for(var i = 0; i < currentString.length; i++) {
               if(!currentString[i].match(/\s/)) {
-
-                output(`ERROR LEXER - Unexpected Character [ ${currentString[i]} ] at (${row}:${col+i}) via 160`);
-                console.log(JSON.stringify(currentString), currentString.split(/\n/).length - 1)
+                outputLex(`ERROR LEXER - Unexpected Character [ ${currentString[i]} ] at (${row}:${col+i}) via 156`);
                 row += currentString.split(/\n/).length - 1;
                 break;
               }
             }
-            console.log('ERROR');
           }
       }
 
@@ -176,29 +175,46 @@ function lexer(input) {
         endIndex: 0
       }
     }
+    if(!error) {
+      outputLex(`INFO LEXER - Successfully completed lexing program ${id}`);
+      console.log(tokens)
+      parse(tokens[id], id);
+    }
   });
 }
 
-var tokens = [];
-function createToken(bestCandidate) {
+function createToken(bestCandidate, program) {
   var val = `   DEBUG LEXER - ${lexer_index[bestCandidate.value] ? `${lexer_index[bestCandidate.value]} [ ${bestCandidate.value} ]` : `${bestCandidate.key} [ ${bestCandidate.value} ]`} found at (${bestCandidate.row}:${bestCandidate.col})`
-  tokens.push({
-    text: val,
+  var token = {
     value: bestCandidate.value,
+    priority: bestCandidate.priority,
     key: bestCandidate.key,
     row: bestCandidate.row,
     col: bestCandidate.col
-  });
-  lastToken = tokens[tokens.length-1];
-  output(val);
+  };
+
+  if(!tokens[program]) {
+    tokens[program] = [];
+  }
+
+  tokens[program].push(token);
+  lastToken = token;
+  outputLex(val);
 }
 
-function output(info) { //Print to screen
-  document.querySelector('#output').innerHTML += `\n${info}`;
+function outputLex(info) { //Print to screen
+  document.querySelector('#output_lex').innerHTML += `\n${info}`;
+}
+
+function outputParse(info) { //Print to screen
+  document.querySelector('#output_parse').innerHTML += `\n${info}`;
 }
 
 function start() { //Initialize with example programs
   //document.querySelector('#input').value = "{}$\n\n{{{{{{}}}}}}$\n\n{{{{{{}}} /* comments are ignored */ }}}}$\n\n{ /* comments	are	still	ignored	*/ int @}$\n\n{\nint a\na = a\nstring b\na = b\n}$"
-  document.querySelector('#input').value = "{\n~@#%^&*_+{}|:<>?[];',./\nbool ean d\n}$\n\n{\nint A\n}$\n\n{intfintif=2}$";
+  document.querySelector('#input').value = "{print(a)}$";
 }
-start();
+
+document.addEventListener('DOMContentLoaded', () => {
+  start();
+});
