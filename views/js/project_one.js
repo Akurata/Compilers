@@ -85,9 +85,6 @@ function lexer(input) {
 
     output(`${id > 0 ? '\n' : ''}INFO LEXER - Lexing program ${id}...`);
     console.log(`${id > 0 ? '\n' : ''}INFO LEXER - Lexing program ${id}...`);
-    console.log(parseInt(p[start]) || p[start].match(/\s/), row)
-    console.log(p)
-    console.log(p.split(/\r\n|\r|\n/).length)
 
     while(start < p.length && !error) {
 
@@ -146,9 +143,6 @@ function lexer(input) {
           }
 
           col += bestCandidate.value.length;
-          //console.log(col)
-          //col++;
-          //col = start;
 
           if(didUpdate && !error) {
             //console.log(`LAST TOKEN: ${lastToken.value}`);
@@ -169,11 +163,6 @@ function lexer(input) {
             console.log('ERROR');
           }
       }
-
-      //console.log(!didUpdate, currentString.length, (end - start), end, start, p[end], p.substring(start, end), currentString)
-      //if(!didUpdate && currentString.match(/^[A-Z]{1}/)) { //Identify errors for capital IDs
-      //console.log(didUpdate)
-
 
       start++; //Start looking for new keyphrase
       end = start;
