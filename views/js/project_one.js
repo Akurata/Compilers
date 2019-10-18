@@ -27,9 +27,9 @@ var lexer_syntax = { //Predefined syntax for regex matching
 }
 
 var lexer_index = { //Index for token generateion + output
-  'print': 'Print_Statement',
-  'while': 'While_Statement',
-  'if': 'If_Statement',
+  'print': 'PRINT_STMT',
+  'while': 'WHILE_STMT',
+  'if': 'IF_STMT',
   '(': 'L_PAREN',
   ')': 'R_PAREN',
   '"': 'QUOTE',
@@ -54,7 +54,6 @@ var lastToken = {};
 
 function lexer(input) {
   document.querySelector('#output').innerHTML = ''; //Clear Output
-  //input = input.toLowerCase(); //Uniform formatting
 
   var bestCandidate = { //Set default best candidate
     key: null,
@@ -85,10 +84,12 @@ function lexer(input) {
     var error = false;
 
     output(`${id > 0 ? '\n' : ''}INFO LEXER - Lexing program ${id}...`);
+    console.log(`${id > 0 ? '\n' : ''}INFO LEXER - Lexing program ${id}...`);
+    console.log(parseInt(p[start]) || p[start].match(/\s/), row)
 
     while(start < p.length && !error) {
 
-      if(p[start] == '\n') { //If identified white space, increment the row count
+      if(p[start].match(/\s/)) { //If identified white space, increment the row count
         row++;
         col = 0;
         end++;
@@ -100,7 +101,7 @@ function lexer(input) {
           if(quotes > 0 && quotes%2 === 0) { //Detect and build strings
             while(p[end+1] != '\"') {
               currentString = p.substring(start, end+1);
-              if(p[end] === '\n' || p[end].match(/([A-Z]|[0-9])/g)) {
+              if(p[end] === '\n' || p[end].match(/([A-Z]|[0-9])/g)) { //Catch errors in strings
                 error = true;
                 output(`ERROR LEXER - Unexpected Character [${JSON.stringify(p[end])}] at (${row}:${col}) via 102`);
                 break;
@@ -119,7 +120,7 @@ function lexer(input) {
             start = end;
             end++;
 
-          }else {
+          }else { //Otherwise build tokens
             while(end <= p.length) {
               currentString = p.substring(start, end+1);
               Object.keys(lexer_syntax).forEach((key) => {
@@ -141,23 +142,21 @@ function lexer(input) {
               end++;
             }
           }
+          col += bestCandidate.value.length;
+          console.log(col)
+          //col++;
+          //col = start;
 
-          col++;
-          //if(bestCandidate.priority > 0) { //Generate token based on complete identifiable rule.
-          console.log(currentString.length, (p.length - start))
-          if(didUpdate) {
-            console.log(`LAST TOKEN: ${lastToken.value}`);
-            console.log(`CURRENT TOKEN: ${bestCandidate.value}`);
-            if(!error) {
-              createToken(bestCandidate);
-            }
-          }else {
+          if(didUpdate && !error) {
+            //console.log(`LAST TOKEN: ${lastToken.value}`);
+            //console.log(`CURRENT TOKEN: ${bestCandidate.value}`);
+            createToken(bestCandidate);
+          }else { //Catch errors for characters/symbols that do not exist in grammar
             error = true;
-            console.log(currentString)
             var errorChar;
             for(var i = 0; i < currentString.length; i++) {
               if(!currentString[i].match(/\s/)) {
-                output(`ERROR LEXER - Unexpected Character [ ${currentString[0]} ] at (${row}:${col+i}) via 158`);
+                output(`ERROR LEXER - Unexpected Character [ ${currentString[i]} ] at (${row}:${col+i}) via 160`);
                 break;
               }
             }
@@ -208,6 +207,6 @@ function output(info) { //Print to screen
 
 function start() { //Initialize with example programs
   //document.querySelector('#input').value = "{}$\n\n{{{{{{}}}}}}$\n\n{{{{{{}}} /* comments are ignored */ }}}}$\n\n{ /* comments	are	still	ignored	*/ int @}$\n\n{\nint a\na = a\nstring b\na = b\n}$"
-  document.querySelector('#input').value = "{\n~@#%^&*_+{}|:<>?[];',./\nbool ean d\n}$\n\n{\nint A\n}$";
+  document.querySelector('#input').value = "{\n~@#%^&*_+{}|:<>?[];',./\nbool ean d\n}$\n\n{\nint A\n}$\n\n{intfintif=2}$";
 }
 start();
