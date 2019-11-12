@@ -177,7 +177,7 @@ function lex(input) {
     }
     if(!error) {
       outputLex(`INFO LEXER - Successfully completed lexing program ${id}`);
-      console.log(tokens)
+      console.log(Object.assign({}, tokens[id]));
       parse(tokens[id], id);
     }
   });

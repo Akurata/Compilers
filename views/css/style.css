@@ -1300,3 +1300,9 @@ footer .credits a {
 .split {
   display: flex;
 }
+
+
+#output_cst {
+  height: 55vh;
+  border: 1px solid lightgray;
+}

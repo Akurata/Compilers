@@ -1,57 +1,44 @@
 
+function node(key, token, value) {
+  var node = {};
+  node.id = key;
+  node.token = token;
+  node.value = value;
 
-function cst() {
-  this.root = null;
-  this.current = {children: []};
+  node.parent = {};
+  node.children = [];
 
-  this.addBranch = (token) => {
-    //console.log('\n');
-    //console.log(token);
-    //console.log('\n');
-
-    var node = this.node(token);
-    if(!this.root) {
-      this.root = node;
-    }else {
-      node.parent = this.current;
-      this.current.children.push(node);
-    }
-    this.current = node;
+  node.appendChild = (child) => {
+    node.children.push(child);
+    child.parent = node;
   }
 
-  this.node = (token, parent) => {
-    return {
-      key: token.key,
-      token: token,
-      value: token.value,
-      parent: parent,
-      children: []
-    };
-  }
+  return node;
 }
 
 
-
-var cst = new Tree();
-
-function cstView() {
-  this.root = {name: 'Root', children: [], parent: null};
-  this.current = this.root;
-
-  this.addNode = (name) => {
-    var node = {
-      name: name,
-      children: [],
-      parent: this.current
-    }
-    this.current.children.push(node)
-  }
-
-
+function edge(from, to) {
+  var edge = {};
+  edge.from = from;
+  edge.to = to;
+  return edge;
 }
+
+var cstContainer = document.querySelector('#output_cst');
+var options = {
+  layout: {
+    hierarchical: {
+      enabled: true,
+
+    }
+  }
+}
+
+var cst = new vis.Network(cstContainer, null, options)
+
 
 var shift = [];
-
+/*
 function matchConsume(values) {
   var valid = true;
 
@@ -61,9 +48,11 @@ function matchConsume(values) {
 
     if(tokenSet[0].value.match((typeof values[i] === 'function') ? values[i]() : values[i]) && valid) {
 
-      console.log(`CONSUME - ${tokenSet[0].value}`);
-
+      //console.log(`CONSUME - ${tokenSet[0].value}`);
+      //console.log()
       shift.push(tokenSet.shift());
+      console.log(Object.assign({}, tokenSet))
+      //console.log(shift)
 
     }else {
       valid = false;
@@ -74,57 +63,122 @@ function matchConsume(values) {
   }
 
   return valid;
-}
+}*/
 
 
-
+var currentNode;
 
 var tokenSet;
-
+var currentIndex = 0;
+var edges = [];
 function parse(programTokens, p) {
-  cst = new Tree();
-  cst.addNode(`Program ${p}`, 'branch');
-
-  tokenSet = programTokens;
-  //console.log(programTokens);
-  //console.log(tokens[p]);
-  //console.log(cst);
+  currentNode = node(currentIndex++, ``, `Program ${p}`); //Start CST
+  tokenSet = programTokens; //Update tokens refernce
 
   outputParse(`${id > 0 ? '\n' : ''}INFO PARSER - Parsing program ${p}...`);
-  //console.log(`${id > 0 ? '\n' : ''}INFO PARSER - Parsing program ${p}...`);
 
-  var check = matchConsume([program]);
+  //var check = matchConsume([program]);
   //console.log(check);
 
+  if(match([program])) {
+    edges.push(edge(currentIndex-1, currentIndex));
+    console.log(currentNode)
+  }else {
+    console.log('No program??')
+  }
+
   outputParse(`INFO PARSER - Successfully completed parsing program ${p}`);
-  outputCST(cst.toString());
+  //outputCST(cst.toString());
+
+  //var nodes = new vis.DataSet([]);
+  //var edges = new vis.DataSet([]);
+  //cst.setData({nodes:nodes, edges:edges});
 }
 
 
+var curr = 0;
+function match(targetTokens) {
+  var valid = true;
+  //console.log(`MATCH: ${typeof targetTokens[curr]}`)
+  console.log(targetTokens)
 
+  for(var i = 0; i < targetTokens.length; i++) {
+    console.log(`MATCH: ${targetTokens[i]}`)
+    console.log(tokenSet[curr])
+    var isTerminal = typeof targetTokens[i] === 'function';
+    var numTokens = (tokenSet.length - curr);
+
+    if(numTokens > 1) {
+      if((isTerminal) ? targetTokens[i]() : tokenSet[curr].value.match(targetTokens[i])) {
+        console.log('MATCHED', targetTokens[i])
+        console.log(currentNode)
+      }else {
+        valid = false;
+        break;
+      }
+      curr++;
+    }
+
+    console.log(tokenSet.length, numTokens)
+  }
+
+
+  /*
+  tokenSet.forEach((token) => {
+    var isTerminal = typeof targetTokens[curr] === 'function';
+    if((isTerminal) ? targetTokens[curr]() : token.value.match(targetTokens[curr])) {//Match tokens in order
+      curr++;
+      console.log(`MATCH: ${targetTokens[curr]}`)
+    }
+  });
+  */
+  //console.log(curr, targetTokens.length)
+  /*
+  if(valid) {//If all the tokens were matched
+    return true;
+  }else {
+    return false;
+  }*/
+  return valid;
+}
 
 
 
 function program() {
-  //console.log('PARSE PROGRAM');
+  console.log('PARSE PROGRAM');
   outputParse(`  DEBUG PARSER - program()`);
-  return matchConsume([block, '$']);
+  //return matchConsume([block, '$']);
+
+  if(match([block, '$'])) {
+    edges.push(edge(currentIndex, currentIndex+1));
+    var program = node(currentIndex++, '', 'Program');
+    currentNode.appendChild(program);
+    currentNode = program;
+
+    return true;
+  }else {
+    return false;
+  }
 }
 
 
 function block() {
   console.log('PARSE BLOCK');
   outputParse(`  DEBUG PARSER - block()`);
-  if(matchConsume(['{', statementList, '}'])) {
+
+  if(match(['{', statementList, '}'])) {
     console.log('THERE IS BLOCK')
-    cst.addNode('Block', 'branch');
-    //cst.addNode('{');
 
-    //cst.addNode('StatementList', 'branch');
-    //cst.endChildren();
+    var block = node(currentIndex++, '', 'Block');
+    var stmtList = node(currentIndex++, '', 'Statement List');
 
-    //cst.addNode('}');
-    //cst.endChildren();
+    currentNode.appendChild(block);
+    block.appendChild(node(currentIndex++, tokenSet.shift(), '{'));
+    edges.push(edge(currentIndex, currentIndex+1));
+    block.appendChild(stmtList);
+    block.appendChild(node(currentIndex++, tokenSet.shift(), '}'));
+    currentNode = stmtList;
+
     return true;
   }else {
     return false;
@@ -134,36 +188,41 @@ function block() {
 
 
 function statementList() {
-  //console.log('PARSE STATEMENT LIST');
+  console.log('PARSE STATEMENT LIST');
   outputParse(`  DEBUG PARSER - statementList()`);
-  if(matchConsume([statement, statementList])) {
-    console.log('THERE IS STATEMENT LIST WITH S')
-    cst.addNode('Statement', 'branch');
-    cst.addNode('StatementList', 'branch');
+  if(match([statement, statementList])) {
+    var stmt = node(currentIndex++, '', 'Statement');
+    edges.push(edge(currentIndex, currentIndex+1));
+    var stmtList = node(currentIndex++, '', 'Statement List');
+
+    currentNode.appendChild(stmt);
+    currentNode.appendChild(stmtList);
+    currentNode = stmtList;
+
     return true;
   }else {
     console.log('THERE IS STATEMENT LIST WITH E')
     //cst.endChildren();
-    return '';
+    return false;
   }
 
 }
 
 
 function statement() {
-  //console.log('PARSE STATEMENT');
+  console.log('PARSE STATEMENT');
   outputParse(`  DEBUG PARSER - statement()`);
-  if(matchConsume([printStatement])) {
+  if(match([printStatement])) {
     return true;
-  }else if(matchConsume([assignmentStatement])) {
+  }else if(match([assignmentStatement])) {
     return true;
-  }else if(matchConsume([varDecl])) {
+  }else if(match([varDecl])) {
     return true;
-  }else if(matchConsume([whileStatement])) {
+  }else if(match([whileStatement])) {
     return true;
-  }else if(matchConsume([ifStatement])) {
+  }else if(match([ifStatement])) {
     return true;
-  }else if(matchConsume([block])) {
+  }else if(match([block])) {
     return true;
   }else {
     return false;
@@ -172,9 +231,28 @@ function statement() {
 
 
 function printStatement() {
-  //console.log('PARSE PRINT STATEMENT');
+  console.log('PARSE PRINT STATEMENT');
   outputParse(`  DEBUG PARSER - printStatement()`);
-  if(matchConsume(['print', /^(\()$/, expr, /^(\))$/])) {
+  if(match(['print', /\(/, expr, /\)/])) {
+
+    edges.push(edge(currentIndex, currentIndex+1));
+    var printStmt = node(currentIndex++, tokenSet.shift(), 'Print Statement');
+    edges.push(edge(currentIndex, currentIndex+1));
+    var lParen = node(currentIndex++, tokenSet.shift(), '(');
+    edges.push(edge(currentIndex, currentIndex+1));
+    var express = node(currentIndex++, '', 'Expression');
+    edges.push(edge(currentIndex, currentIndex+1));
+    var rParen = node(currentIndex++, tokenSet.shift(), ')');
+
+    currentNode.appendChild(printStmt);
+    currentNode.appendChild(lParen);
+    currentNode.appendChild(expr);
+    currentNode.appendChild(rParen);
+    currentNode = express;
+
+    console.log('MATCHED PRINT STMT');
+    console.log(currentNode)
+
     return true;
   }else {
     console.log('THERE IS NOT PRINT')
@@ -212,15 +290,15 @@ function ifStatement() {
 
 
 function expr() {
-  //console.log('PARSE EXPR');
+  console.log('PARSE EXPR');
   outputParse(`  DEBUG PARSER - expr()`);
-  if(matchConsume([intExpr])) {
+  if(match([intExpr])) {
     return true;
-  }else if(matchConsume([stringExpr])) {
+  }else if(match([stringExpr])) {
     return true;
-  }else if(matchConsume([booleanExpr])) {
+  }else if(match([booleanExpr])) {
     return true;
-  }else if(matchConsume([id])) {
+  }else if(match([id])) {
     return true;
   }else {
     return false;
@@ -229,11 +307,11 @@ function expr() {
 
 
 function intExpr() {
-  //console.log('PARSE INT EXPR');
+  console.log('PARSE INT EXPR');
   outputParse(`  DEBUG PARSER - intExpr()`);
-  if(matchConsume([digit, intOp, expr])) {
+  if(match([digit, intOp, expr])) {
     return true;
-  }else if(matchConsume([digit])) {
+  }else if(match([digit])) {
     return true;
   }else {
     return false;
@@ -242,32 +320,86 @@ function intExpr() {
 
 
 function stringExpr() {
-  //console.log('PARSE STRING EXPR');
+  console.log('PARSE STRING EXPR');
   outputParse(`  DEBUG PARSER - stringExpr()`);
-  return matchConsume(['\"', charList, '\"']);
+  if(match(['\"', charList, '\"'])) {
+    edges.push(edge(currentIndex, currentIndex+1));
+    var lQuote = node(currentIndex++, tokenSet.shift(), '\"');
+    edges.push(edge(currentIndex, currentIndex+1));
+    var charlist = node(currentIndex++, '', 'Char List');
+    edges.push(edge(currentIndex, currentIndex+1));
+    var rQuote = node(currentIndex++, tokenSet.shift(), '\"');
+
+    currentNode.appendChild(lQuote);
+    currentNode.appendChild(charlist);
+    currentNode.appendChild(rQuote);
+    currentNode = charlist;
+
+    return true;
+  }else {
+    return false;
+  }
 }
 
 
 function booleanExpr() {
   //console.log('PARSE BOOLEAN EXPR');
   outputParse(`  DEBUG PARSER - booleanExpr()`);
-  return matchConsume([/^(\()$/, expr, /^(\))$/]);
+  if(match([/^(\()$/, expr, /^(\))$/])) {
+    edges.push(edge(currentIndex, currentIndex+1));
+    var bool = node(currentIndex++, '', 'Boolean');
+    currentNode.appendChild(bool);
+    currentNode = charlist;
+
+    edges.push(edge(currentIndex, currentIndex+1));
+    var temp = tokenSet.shift();
+    var val = node(currentIndex++, temp, temp.value);
+    currentNode.appendChild(val);
+    currentNode = val;
+
+    return true;
+  }else {
+    return false;
+  }
+
 }
 
 
 function id() {
   //console.log('PARSE ID');
   outputParse(`  DEBUG PARSER - id()`);
-  return matchConsume([char]);
+  if(match([char])) {
+    edges.push(edge(currentIndex, currentIndex+1));
+    var carid = node(currentIndex++, '', 'ID');
+    currentNode.appendChild(carid);
+
+    edges.push(edge(currentIndex, currentIndex+1));
+    var temp = tokenSet.shift();
+    var carid = node(currentIndex++, temp, temp.value);
+    currentNode.appendChild(carid);
+
+    return true;
+  }else {
+    return false;
+  }
 }
 
 
 function charList() {
-  //console.log('PARSE CHAR LIST');
+  console.log('PARSE CHAR LIST');
   outputParse(`  DEBUG PARSER - charList()`);
-  if(matchConsume([char(), charList()])) {
+  if(matchConsume([char, charList])) {
+    edges.push(edge(currentIndex, currentIndex+1));
+    var chara = node(currentIndex++, '', 'Char');
+    edges.push(edge(currentIndex, currentIndex+1));
+    var charlist = node(currentIndex++, '', 'Char List');
+
+    currentNode.appendChild(chara);
+    currentNode.appendChild(charlist);
+    currentNode = charlist;
+
     return true;
-  }else if(matchConsume([space(), charList()])) {
+  }else if(matchConsume([space, charList])) {
     return true;
   }else {
     return false;
@@ -283,9 +415,22 @@ function type() {
 
 
 function char() {
-  //console.log('PARSE CHAR');
+  console.log('PARSE CHAR');
   outputParse(`  DEBUG PARSER - char()`);
-  return matchConsume([/^[a-z]$/]);
+  if(match([/^[a-z]$/])) {
+    edges.push(edge(currentIndex, currentIndex+1));
+    var chara = node(currentIndex++, '', 'Char');
+    currentNode = chara;
+
+    edges.push(edge(currentIndex, currentIndex+1));
+    var temp = tokenSet.shift();
+    var val = node(currentIndex++, temp, temp.value);
+    currentNode = val;
+
+    return true;
+  }else {
+    return false;
+  }
 }
 
 
@@ -297,9 +442,23 @@ function space() {
 
 
 function digit() {
-  //console.log('PARSE DIGIT');
+  console.log('PARSE DIGIT');
   outputParse(`  DEBUG PARSER - digit()`);
-  return matchConsume([/^[0-9]$/]);
+  if(match([/^[0-9]$/])) {
+    edges.push(edge(currentIndex, currentIndex+1));
+    var digit = node(currentIndex++, '', 'Digit');
+    currentNode.appendChild(digit);
+    currentNode = digit;
+
+    edges.push(edge(currentIndex, currentIndex+1));
+    var temp = tokenSet.shift();
+    var val = node(currentIndex++, temp, temp.value);
+    currentNode.appendChild(val);
+
+    return true;
+  }else {
+    return false;
+  }
 }
 
 
@@ -317,7 +476,16 @@ function boolVal() {
 
 
 function intOp() {
-  //console.log('PARSE INT OP');
+  console.log('PARSE INT OP');
   outputParse(`  DEBUG PARSER - intOp()`);
-  return matchConsume([/^\+$/]);
+  if(match([/^\+$/])) {
+    edges.push(edge(currentIndex, currentIndex+1));
+    var temp = tokenSet.shift();
+    var intop = node(currentIndex++, temp, temp.value);
+    currentNode.appendChild(intop);
+
+    return true;
+  }else {
+    return false;
+  }
 }
