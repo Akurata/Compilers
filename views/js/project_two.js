@@ -1,19 +1,26 @@
 
 function node(key, token, value) {
-  var node = {};
-  node.id = key;
-  node.token = token;
-  node.value = value;
+  this.node = {};
+  this.node.id = key;
+  this.node.token = token;
+  this.node.value = value;
 
-  node.parent = {};
-  node.children = [];
+  this.node.parent = {};
+  this.node.children = [];
 
-  node.appendChild = (child) => {
-    node.children.push(child);
-    child.parent = node;
+  this.node.appendChild = (child) => {
+    //console.log('APPEND CHILD')
+    //console.log(this.node)
+    //console.log(child)
+    this.node.children.push(child);
+    child.parent = this.node;
   }
 
-  return node;
+  this.node.setParent = (parent) => {
+    this.parent = parent;
+  }
+
+  return this.node;
 }
 
 
@@ -33,8 +40,6 @@ var options = {
     }
   }
 }
-
-var cst = new vis.Network(cstContainer, null, options)
 
 
 var shift = [];
@@ -66,14 +71,18 @@ function matchConsume(values) {
 }*/
 
 
-var currentNode;
-
 var tokenSet;
+var cst = {
+  head: {},
+  currentNode: null
+}
 var currentIndex = 0;
 var edges = [];
 function parse(programTokens, p) {
-  currentNode = node(currentIndex++, ``, `Program ${p}`); //Start CST
   tokenSet = programTokens; //Update tokens refernce
+
+  cst.currentNode = new node(currentIndex++, ``, `Program ${p}`); //Start CST
+  cst.head = cst.currentNode;
 
   outputParse(`${id > 0 ? '\n' : ''}INFO PARSER - Parsing program ${p}...`);
 
@@ -82,12 +91,16 @@ function parse(programTokens, p) {
 
   if(match([program])) {
     edges.push(edge(currentIndex-1, currentIndex));
-    console.log(currentNode)
+    console.log(cst.currentNode)
   }else {
     console.log('No program??')
   }
 
   outputParse(`INFO PARSER - Successfully completed parsing program ${p}`);
+  console.log(cst)
+  //cst =
+  new vis.Network(cstContainer, cst, options)
+
   //outputCST(cst.toString());
 
   //var nodes = new vis.DataSet([]);
@@ -98,20 +111,21 @@ function parse(programTokens, p) {
 
 var curr = 0;
 function match(targetTokens) {
-  var valid = true;
+  tokenSet = Object.assign([], tokenSet);
+  var valid = false;
   //console.log(`MATCH: ${typeof targetTokens[curr]}`)
   console.log(targetTokens)
 
   for(var i = 0; i < targetTokens.length; i++) {
-    console.log(`MATCH: ${targetTokens[i]}`)
-    console.log(tokenSet[curr])
     var isTerminal = typeof targetTokens[i] === 'function';
     var numTokens = (tokenSet.length - curr);
 
     if(numTokens > 1) {
       if((isTerminal) ? targetTokens[i]() : tokenSet[curr].value.match(targetTokens[i])) {
         console.log('MATCHED', targetTokens[i])
-        console.log(currentNode)
+        //console.log(tokenSet[curr])
+        //console.log(cst.currentNode)
+        valid = true;
       }else {
         valid = false;
         break;
@@ -151,9 +165,9 @@ function program() {
 
   if(match([block, '$'])) {
     edges.push(edge(currentIndex, currentIndex+1));
-    var program = node(currentIndex++, '', 'Program');
-    currentNode.appendChild(program);
-    currentNode = program;
+    var program = new node(currentIndex++, '', 'Program');
+    program.appendChild(cst.currentNode)
+    cst.head = cst.currentNode;
 
     return true;
   }else {
@@ -169,15 +183,17 @@ function block() {
   if(match(['{', statementList, '}'])) {
     console.log('THERE IS BLOCK')
 
-    var block = node(currentIndex++, '', 'Block');
-    var stmtList = node(currentIndex++, '', 'Statement List');
-
-    currentNode.appendChild(block);
-    block.appendChild(node(currentIndex++, tokenSet.shift(), '{'));
-    edges.push(edge(currentIndex, currentIndex+1));
+    var stmtList = new node(currentIndex++, '', 'Statement List');
+    var block = new node(currentIndex++, '', 'Block');
+    block.appendChild(new node(currentIndex++, tokenSet.shift(), '{'));
     block.appendChild(stmtList);
-    block.appendChild(node(currentIndex++, tokenSet.shift(), '}'));
-    currentNode = stmtList;
+    block.appendChild(new node(currentIndex++, tokenSet.shift(), '}'));
+
+    console.log(Object.assign({}, cst.currentNode))
+    cst.currentNode.appendChild(block);
+    cst.currentNode = block;
+    cst.currentNode = stmtList;
+    //edges.push(edge(currentIndex, currentIndex+1));
 
     return true;
   }else {
@@ -191,13 +207,11 @@ function statementList() {
   console.log('PARSE STATEMENT LIST');
   outputParse(`  DEBUG PARSER - statementList()`);
   if(match([statement, statementList])) {
-    var stmt = node(currentIndex++, '', 'Statement');
-    edges.push(edge(currentIndex, currentIndex+1));
-    var stmtList = node(currentIndex++, '', 'Statement List');
 
-    currentNode.appendChild(stmt);
-    currentNode.appendChild(stmtList);
-    currentNode = stmtList;
+    //edges.push(edge(currentIndex, currentIndex+1));
+    var stmtList = new node(currentIndex++, '', 'Statement List');
+    cst.currentNode.appendChild(stmtList);
+    cst.currentNode = stmtList;
 
     return true;
   }else {
@@ -212,17 +226,30 @@ function statementList() {
 function statement() {
   console.log('PARSE STATEMENT');
   outputParse(`  DEBUG PARSER - statement()`);
+  var stmt = new node(currentIndex++, '', 'Statement');
   if(match([printStatement])) {
+    cst.currentNode.appendChild(stmt);
+    cst.currentNode = stmt;
     return true;
   }else if(match([assignmentStatement])) {
+    cst.currentNode.appendChild(stmt);
+    cst.currentNode = stmt;
     return true;
   }else if(match([varDecl])) {
+    cst.currentNode.appendChild(stmt);
+    cst.currentNode = stmt;
     return true;
   }else if(match([whileStatement])) {
+    cst.currentNode.appendChild(stmt);
+    cst.currentNode = stmt;
     return true;
   }else if(match([ifStatement])) {
+    cst.currentNode.appendChild(stmt);
+    cst.currentNode = stmt;
     return true;
   }else if(match([block])) {
+    cst.currentNode.appendChild(stmt);
+    cst.currentNode = stmt;
     return true;
   }else {
     return false;
@@ -236,22 +263,22 @@ function printStatement() {
   if(match(['print', /\(/, expr, /\)/])) {
 
     edges.push(edge(currentIndex, currentIndex+1));
-    var printStmt = node(currentIndex++, tokenSet.shift(), 'Print Statement');
+    var printStmt =new  node(currentIndex++, tokenSet.shift(), 'Print Statement');
     edges.push(edge(currentIndex, currentIndex+1));
-    var lParen = node(currentIndex++, tokenSet.shift(), '(');
+    var lParen = new node(currentIndex++, tokenSet.shift(), '(');
     edges.push(edge(currentIndex, currentIndex+1));
-    var express = node(currentIndex++, '', 'Expression');
+    var express = new node(currentIndex++, '', 'Expression');
     edges.push(edge(currentIndex, currentIndex+1));
-    var rParen = node(currentIndex++, tokenSet.shift(), ')');
+    var rParen = new node(currentIndex++, tokenSet.shift(), ')');
 
-    currentNode.appendChild(printStmt);
-    currentNode.appendChild(lParen);
-    currentNode.appendChild(expr);
-    currentNode.appendChild(rParen);
-    currentNode = express;
+    cst.currentNode.appendChild(printStmt);
+    cst.currentNode.appendChild(lParen);
+    cst.currentNode.appendChild(express);
+    cst.currentNode.appendChild(rParen);
+    cst.currentNode = express;
 
     console.log('MATCHED PRINT STMT');
-    console.log(currentNode)
+    console.log(cst.currentNode)
 
     return true;
   }else {
@@ -292,13 +319,26 @@ function ifStatement() {
 function expr() {
   console.log('PARSE EXPR');
   outputParse(`  DEBUG PARSER - expr()`);
+  var exp = new node(currentIndex++, '', 'Expression')
   if(match([intExpr])) {
+    exp.appendChild(new node(currentIndex++, '', 'Int Expr'))
+    cst.currentNode.appendChild(exp);
+    cst.currentNode = exp;
     return true;
   }else if(match([stringExpr])) {
+    exp.appendChild(new node(currentIndex++, '', 'String Expr'))
+    cst.currentNode.appendChild(exp);
+    cst.currentNode = exp;
     return true;
   }else if(match([booleanExpr])) {
+    exp.appendChild(new node(currentIndex++, '', 'Bool Expr'))
+    cst.currentNode.appendChild(exp);
+    cst.currentNode = exp;
     return true;
   }else if(match([id])) {
+    exp.appendChild(new node(currentIndex++, '', 'ID'))
+    cst.currentNode.appendChild(exp);
+    cst.currentNode = exp;
     return true;
   }else {
     return false;
@@ -324,16 +364,16 @@ function stringExpr() {
   outputParse(`  DEBUG PARSER - stringExpr()`);
   if(match(['\"', charList, '\"'])) {
     edges.push(edge(currentIndex, currentIndex+1));
-    var lQuote = node(currentIndex++, tokenSet.shift(), '\"');
+    var lQuote = new node(currentIndex++, tokenSet.shift(), '\"');
     edges.push(edge(currentIndex, currentIndex+1));
-    var charlist = node(currentIndex++, '', 'Char List');
+    var charlist = new node(currentIndex++, '', 'Char List');
     edges.push(edge(currentIndex, currentIndex+1));
-    var rQuote = node(currentIndex++, tokenSet.shift(), '\"');
+    var rQuote = new node(currentIndex++, tokenSet.shift(), '\"');
 
-    currentNode.appendChild(lQuote);
-    currentNode.appendChild(charlist);
-    currentNode.appendChild(rQuote);
-    currentNode = charlist;
+    cst.currentNode.appendChild(lQuote);
+    cst.currentNode.appendChild(charlist);
+    cst.currentNode.appendChild(rQuote);
+    cst.currentNode = charlist;
 
     return true;
   }else {
@@ -347,15 +387,15 @@ function booleanExpr() {
   outputParse(`  DEBUG PARSER - booleanExpr()`);
   if(match([/^(\()$/, expr, /^(\))$/])) {
     edges.push(edge(currentIndex, currentIndex+1));
-    var bool = node(currentIndex++, '', 'Boolean');
-    currentNode.appendChild(bool);
-    currentNode = charlist;
+    var bool = new node(currentIndex++, '', 'Boolean');
+    cst.currentNode.appendChild(bool);
+    cst.currentNode = charlist;
 
     edges.push(edge(currentIndex, currentIndex+1));
     var temp = tokenSet.shift();
-    var val = node(currentIndex++, temp, temp.value);
-    currentNode.appendChild(val);
-    currentNode = val;
+    var val = new node(currentIndex++, temp, temp.value);
+    cst.currentNode.appendChild(val);
+    cst.currentNode = val;
 
     return true;
   }else {
@@ -370,13 +410,15 @@ function id() {
   outputParse(`  DEBUG PARSER - id()`);
   if(match([char])) {
     edges.push(edge(currentIndex, currentIndex+1));
-    var carid = node(currentIndex++, '', 'ID');
-    currentNode.appendChild(carid);
+    var varid = new node(currentIndex++, '', 'ID');
+    cst.currentNode.appendChild(varid);
+    cst.currentNode = varid;
 
-    edges.push(edge(currentIndex, currentIndex+1));
+    //edges.push(edge(currentIndex, currentIndex+1));
     var temp = tokenSet.shift();
-    var carid = node(currentIndex++, temp, temp.value);
-    currentNode.appendChild(carid);
+    var varVal = new node(currentIndex++, temp, temp.value);
+    cst.currentNode.appendChild(varVal);
+    cst.currentNode = varVal;
 
     return true;
   }else {
@@ -394,9 +436,9 @@ function charList() {
     edges.push(edge(currentIndex, currentIndex+1));
     var charlist = node(currentIndex++, '', 'Char List');
 
-    currentNode.appendChild(chara);
-    currentNode.appendChild(charlist);
-    currentNode = charlist;
+    cst.currentNode.appendChild(chara);
+    cst.currentNode.appendChild(charlist);
+    cst.currentNode = charlist;
 
     return true;
   }else if(matchConsume([space, charList])) {
@@ -418,14 +460,15 @@ function char() {
   console.log('PARSE CHAR');
   outputParse(`  DEBUG PARSER - char()`);
   if(match([/^[a-z]$/])) {
-    edges.push(edge(currentIndex, currentIndex+1));
-    var chara = node(currentIndex++, '', 'Char');
-    currentNode = chara;
+    //edges.push(edge(currentIndex, currentIndex+1));
 
-    edges.push(edge(currentIndex, currentIndex+1));
-    var temp = tokenSet.shift();
-    var val = node(currentIndex++, temp, temp.value);
-    currentNode = val;
+    var charNode = new node(currentIndex++, '', 'Char');
+    //charNode.appendChild(val);
+    charNode.setParent(cst.currentNode);
+    cst.currentNode = charNode;
+
+    //edges.push(edge(currentIndex, currentIndex+1));
+
 
     return true;
   }else {
@@ -447,13 +490,13 @@ function digit() {
   if(match([/^[0-9]$/])) {
     edges.push(edge(currentIndex, currentIndex+1));
     var digit = node(currentIndex++, '', 'Digit');
-    currentNode.appendChild(digit);
-    currentNode = digit;
+    cst.currentNode.appendChild(digit);
+    cst.currentNode = digit;
 
     edges.push(edge(currentIndex, currentIndex+1));
     var temp = tokenSet.shift();
     var val = node(currentIndex++, temp, temp.value);
-    currentNode.appendChild(val);
+    cst.currentNode.appendChild(val);
 
     return true;
   }else {
@@ -482,7 +525,7 @@ function intOp() {
     edges.push(edge(currentIndex, currentIndex+1));
     var temp = tokenSet.shift();
     var intop = node(currentIndex++, temp, temp.value);
-    currentNode.appendChild(intop);
+    cst.currentNode.appendChild(intop);
 
     return true;
   }else {
