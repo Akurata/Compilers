@@ -95,25 +95,21 @@ function lex(input) {
         row++;
         col = 0;
         end++;
-      }else {
+      }else if(p[start].match(/\S/)){
           if(lastToken.value === '\"') {
             quotes++;
           }
 
-          if(quotes > 0 && quotes%2 === 0) { //Detect and build strings
-            while(p[end+1] != '\"') {
-              currentString = p.substring(start, end+1);
-              if(p[end] === '\n' || p[end].match(/([A-Z]|[0-9])/g)) { //Catch errors in strings
-                error = true;
-                outputLex(`ERROR LEXER - Unexpected Character [${JSON.stringify(p[end])}] at (${row}:${col}) via 105`);
-                break;
-              }
-              end++;
+          if(quotes > 0 && quotes%2 !== 0) { //Detect and build strings
+            if(p[end].match(/([A-Z]|[0-9])/g)) { //Catch errors in strings
+              error = true;
+              outputLex(`ERROR LEXER - Unexpected Character [${JSON.stringify(p[end])}] at (${row}:${col}) via 105`);
+              break;
             }
 
-            bestCandidate.key = 'STRING';
+            bestCandidate.key = 'CHAR';
             bestCandidate.priority = 1;
-            bestCandidate.value = currentString;
+            bestCandidate.value = p[end];
             bestCandidate.col = col;
             bestCandidate.row = row;
             bestCandidate.endIndex = end;
@@ -197,9 +193,12 @@ function createToken(bestCandidate, program) {
     tokens[program] = [];
   }
 
-  tokens[program].push(token);
-  lastToken = token;
-  outputLex(val);
+  if(token.key !== 'COMMENT') {
+    tokens[program].push(token);
+    lastToken = token;
+    outputLex(val);
+  }
+
 }
 
 function outputLex(info) { //Print to screen
@@ -214,11 +213,7 @@ function outputCST(info) {
   document.querySelector('#output_cst').innerHTML += `\n${info}`;
 }
 
-function start() { //Initialize with example programs
-  //document.querySelector('#input').value = "{}$\n\n{{{{{{}}}}}}$\n\n{{{{{{}}} /* comments are ignored */ }}}}$\n\n{ /* comments	are	still	ignored	*/ int @}$\n\n{\nint a\na = a\nstring b\na = b\n}$"
-  document.querySelector('#input').value = "{print(a)}$";
-}
 
 document.addEventListener('DOMContentLoaded', () => {
-  start();
+  document.querySelector('#input').value = "{print(a)}$";
 });
