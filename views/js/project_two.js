@@ -27,8 +27,11 @@ function node(token, value) {
     parent.appendChild(this.node);
   }
 
-  this.node.nextChildOver = () => {
-    //return this.parent.children
+  this.node.nextNode = () => {
+    console.log(this.node)
+    var pool = this.node.parent.children;
+    console.log(pool)
+    return pool.find((item, i) => {if(item === this.node) {return pool[i+1];}});
   }
 
   return this.node;
@@ -83,20 +86,16 @@ function matchConsume(values) {
 
 
 var tokenSet;
-var cst = {
-  head: {},
-  currentNode: {}
-}
+var cst = {};
 var edges = [];
 function parse(programTokens, p) {
   tokenSet = programTokens; //Update tokens refernce
+  console.log(JSON.parse(JSON.stringify(tokenSet)));
 
   outputParse(`${id > 0 ? '\n' : ''}INFO PARSER - Parsing program ${p}...`);
   var result = match([program]);
   if(result.isValid) {
-    var prog = new node('', `Program ${p}`)
-    prog.appendChild(cst.currentNode);
-    cst.currentNode = prog;
+    cst = result.nodes[0].node;
   }else {
     outputParse(`${id > 0 ? '\n' : ''}INFO PARSER - Encountered fatal errors when parsing program ${p}...`);
     console.log('No program??')
@@ -111,7 +110,7 @@ function parse(programTokens, p) {
     chart: {
       container: '#output_cst'
     },
-    nodeStructure: cst.head
+    nodeStructure: cst
   });
 
   //outputCST(cst.toString());
@@ -121,59 +120,128 @@ function parse(programTokens, p) {
   //cst.setData({nodes:nodes, edges:edges});
 }
 
+var context = 0;
 
 var curr = 0;
 function match(targetTokens) {
-  tokenSet = Object.assign([], tokenSet);
+
+  //tokenSet = Object.assign([], tokenSet);
   var valid = {
-    isValid: false,
-    epsilon: false,
-    tokens: []
+    isValid: true,
+    epsilon: null,
+    nodes: []
   };
   //console.log(`MATCH: ${typeof targetTokens[curr]}`)
   console.log(targetTokens)
 
-  for(var i = 0; i < targetTokens.length; i++) {
-    var isTerminal = typeof targetTokens[i] === 'function';
-    var numTokens = (tokenSet.length - curr);
 
-    if(numTokens > 1) {
-      if((isTerminal) ? targetTokens[i]() : tokenSet[curr].value.match(targetTokens[i])) {
-        console.log('MATCHED', targetTokens[i])
-        //console.log(tokenSet[curr])
-        console.log(Object.assign({}, cst.currentNode));
-        console.log(tokenSet[curr])
-        valid.isValid = true;
-        valid.tokens.push(tokenSet[curr]);
+  for(var i = 0; i < targetTokens.length; i++) {
+    console.log(`CURR = ${curr}`)
+
+    var check = null;
+    var target = null;
+    var isTerminal = typeof targetTokens[i] === 'function';
+    if(isTerminal) {
+      target = targetTokens[i]();
+      if(target) {
+        check = true;
       }else {
-        valid.epsilon = true;
-        break;
+        check = false
       }
-      curr++;
+    }else if(curr > tokenSet.length) {
+      check = false;
+    }else {
+      check = tokenSet[curr].value.match(targetTokens[i]);
     }
 
-    console.log(tokenSet.length, numTokens)
-  }
+    if(check) {
+      console.log('MATCHED', targetTokens[i])
+      console.log(check, target)
+      if(target) {
+        valid.nodes.push({node: target})
+      }else {
+        valid.nodes.push({target: targetTokens[i], token: tokenSet[curr]})
+        curr++;
+      }
 
+    }else {
+      valid.nodes.forEach((node) => {
+        valid.nodes.pop();
+        curr--;
+      });
+
+      valid.isValid = false;
+      console.log(`FAILED`, targetTokens, check)
+      break;
+    }
+
+  }
+  console.log(valid)
   return valid;
 }
+
+
+
+
+
+/*
+    var isTerminal = typeof targetTokens[i] === 'function';
+
+    //check.unshift(tokenSet.shift());
+    console.log(curr)
+    console.log(tokenSet)
+
+    var matchResult;
+    if(isTerminal) {
+      valid.res = targetTokens[i]();
+    }else {
+      valid.res = tokenSet[curr].value.match(targetTokens[i])
+    }
+
+    if(valid.res) {
+      console.log('MATCHED', targetTokens[i])
+      //console.log(JSON.parse(JSON.stringify(cst.currentNode)));
+      console.log('TO', tokenSet[curr])
+    }else {
+      valid.epsilon = true;
+      valid.isValid = false;
+      //curr = curr - i
+    }
+
+
+    curr++;
+
+    if(valid.isValid) {
+      targetTokens.forEach((target) => {
+
+        valid.nodes.push({target: target, token: tokenSet[curr-1]});
+      });
+    }
+
+*/
+
+
 
 
 
 function program() {
   console.log('PARSE PROGRAM');
 
-  outputParse(`  TRY - program()`);
+  var index = context++;
+  outputParse(`${indent(index)}TRY - program()`);
   var result = match([block, '$']);
   if(result.isValid) {
-    outputParse(`  SUCCESS - program()`);
-    edges.push(edge(currentIndex, currentIndex+1));
-    var program = new node('', 'Program');
-    program.appendChild(cst.currentNode)
-    cst.head = cst.currentNode;
+    outputParse(`${indent(index)}SUCCESS - program()`);
+    context--;
 
-    return true;
+    console.log(result)
+    var programVal = new node('', 'Program');
+    programVal.appendChild(result.nodes[0].node)
+
+    return programVal;
   }else {
+    outputParse(`${indent(index)}FAIL - program()`);
+    context--;
     return false;
   }
 }
@@ -182,20 +250,23 @@ function program() {
 function block() {
   console.log('PARSE BLOCK');
 
-  outputParse(`  TRY - block()`);
+  var index = context++;
+  outputParse(`${indent(index)}TRY - block()`);
   var result = match(['{', statementList, '}']);
   if(result.isValid) {
-    outputParse(`  SUCCESS - block()`);
+    outputParse(`${indent(index)}SUCCESS - block()`);
+    context--;
+
+    console.log(result)
     var block = new node('', 'Block');
-    block.appendChild(new node(null, '{'));
-    block.appendChild(cst.currentNode);
-    block.appendChild(new node(null, '}'));
+    block.appendChild(new node(result.nodes[0].token, result.nodes[0].token.value));
+    block.appendChild(result.nodes[1].node);
+    block.appendChild(new node(result.nodes[2].token, result.nodes[2].token.value));
 
-    cst.currentNode = block;
-    //edges.push(edge(currentIndex, currentIndex+1));
-
-    return true;
+    return block;
   }else {
+    outputParse(`${indent(index)}FAIL - block()`);
+    context--;
     return false;
   }
 
@@ -205,32 +276,32 @@ function block() {
 function statementList() {
   console.log('PARSE STATEMENT LIST');
 
-  outputParse(`  TRY - statementList()`);
+  var index = context++;
+  outputParse(`${indent(index)}TRY - statementList()`);
   var result = match([statement, statementList]);
+  console.log(result)
+  //if(result.)
+
+  var stmtList = new node('', 'StatementList');
   if(result.isValid) {
-    outputParse(`  SUCCESS - statementList()`);
+    outputParse(`${indent(index)}SUCCESS - statementList()`);
+    context--;
     //edges.push(edge(currentIndex, currentIndex+1));
-    var stmtWrap = new node('', 'Statement List');
 
-    var stmtList = new node('', 'Statement List');
-    //stmtList.appendChild(cst.currentNode); //CST next node maybe??
+    stmtList.appendChild(result.nodes[0].node);
+    stmtList.appendChild(result.nodes[1].node);
 
-    stmtWrap.appendChild(cst.currentNode);
-    stmtWrap.appendChild(stmtList);
-
-    cst.currentNode = stmtWrap;
-
-    return true;
-  }else if(result.epsilon) {
-    console.log('THERE IS STATEMENT LIST WITH E')
-    var eps = new node('', '\u03B5');
-    eps.appendChild(cst.currentNode)
-    cst.currentNode = eps;
-    //cst.endChildren();
-    return true;
   }else {
-    return false;
+    outputParse(`${indent(index)}FAIL - statementList() [Epsilon]`);
+    context--;
+
+    console.log(result.epsilon)
+    var eps = new node('', '\u03B5')
+    stmtList.appendChild(eps);
+
   }
+
+  return stmtList;
 
 }
 
@@ -238,60 +309,95 @@ function statementList() {
 function statement() {
   console.log('PARSE STATEMENT');
 
-  outputParse(`  TRY - statement()`);
+  var index = context++;
+  outputParse(`${indent(index)}TRY - statement()`);
   var stmt = new node('', 'Statement');
-  if(match([printStatement]).isValid) {
-    outputParse(`  SUCCESS - statement()`);
-    stmt.appendChild(cst.currentNode);
-    cst.currentNode = stmt;
-    return true;
-  }else if(match([assignmentStatement]).isValid) {
-    outputParse(`  SUCCESS - statement()`);
-    stmt.appendChild(cst.currentNode);
-    cst.currentNode = stmt;
-    return true;
-  }else if(match([varDecl]).isValid) {
-    outputParse(`  SUCCESS - statement()`);
-    stmt.appendChild(cst.currentNode);
-    cst.currentNode = stmt;
-    return true;
-  }else if(match([whileStatement]).isValid) {
-    outputParse(`  SUCCESS - statement()`);
-    stmt.appendChild(cst.currentNode);
-    cst.currentNode = stmt;
-    return true;
-  }else if(match([ifStatement]).isValid) {
-    outputParse(`  SUCCESS - statement()`);
-    stmt.appendChild(cst.currentNode);
-    cst.currentNode = stmt;
-    return true;
-  }else if(match([block]).isValid) {
-    outputParse(`  SUCCESS - statement()`);
-    stmt.appendChild(cst.currentNode);
-    cst.currentNode = stmt;
-    return true;
-  }else {
-    return false;
+
+  var printVal = printStatement();
+  if(printVal) {
+    outputParse(`${indent(index)}SUCCESS - statement()`);
+    context--;
+
+    stmt.appendChild(printVal);
+    return stmt;
   }
+
+  if(match([assignmentStatement]).isValid) {
+    outputParse(`${indent(index)}SUCCESS - statement()`);
+    context--;
+
+    stmt.appendChild(cst.currentNode);
+    cst.currentNode = stmt;
+    return true;
+  }
+
+  if(match([varDecl]).isValid) {
+    outputParse(`${indent(index)}SUCCESS - statement()`);
+    context--;
+
+    stmt.appendChild(cst.currentNode);
+    cst.currentNode = stmt;
+    return true;
+  }
+
+  if(match([whileStatement]).isValid) {
+    outputParse(`${indent(index)}SUCCESS - statement()`);
+    context--;
+
+    stmt.appendChild(cst.currentNode);
+    cst.currentNode = stmt;
+    return true;
+  }
+
+  if(match([ifStatement]).isValid) {
+    outputParse(`${indent(index)}SUCCESS - statement()`);
+    context--;
+
+    stmt.appendChild(cst.currentNode);
+    cst.currentNode = stmt;
+    return true;
+  }
+
+  if(match([block]).isValid) {
+    outputParse(`${indent(index)}SUCCESS - statement()`);
+    context--;
+
+    stmt.appendChild(cst.currentNode);
+    cst.currentNode = stmt;
+    return true;
+  }
+
+  //Default
+  outputParse(`${indent(index)}FAIL - statement()`);
+  context--;
+
+  //console.log(cst)
+  //var eps = new node('', '\u03B5')
+  return false;//E????
 }
 
 
 function printStatement() {
   console.log('PARSE PRINT STATEMENT');
 
-  outputParse(`  TRY - printStatement()`);
+  var index = context++;
+  outputParse(`${indent(index)}TRY - printStatement()`);
   var result = match(['print', /\(/, expr, /\)/]);
+  console.log(result)
   if(result.isValid) {
-    outputParse(`  SUCCESS - printStatement()`);
-    var printStmt = new node(result.tokens[0], 'Print Statement');
-    printStmt.appendChild(new node(result.tokens[1], 'Print'));
-    printStmt.appendChild(new node(result.tokens[2], '('));
-    printStmt.appendChild(cst.currentNode);
-    printStmt.appendChild(new node(result.tokens[3], ')'));
-    cst.currentNode = printStmt;
-
-    return true;
+    outputParse(`${indent(index)}SUCCESS - printStatement()`);
+    context--;
+    var printStmt = new node('', 'Print Statement');
+    printStmt.appendChild(new node(result.nodes[0].token, result.nodes[0].token.value));
+    printStmt.appendChild(new node(result.nodes[1].token, result.nodes[1].token.value));
+    printStmt.appendChild(result.nodes[2].node);
+    printStmt.appendChild(new node(result.nodes[3].token, result.nodes[3].token.value));
+    //cst.currentNode = printStmt;
+    console.log(printStmt)
+    return printStmt;
   }else {
+    outputParse(`${indent(index)}FAIL - printStatement()`);
+    context--;
     return false;
   }
 }
@@ -300,26 +406,22 @@ function printStatement() {
 function assignmentStatement() {
   console.log('PARSE ASSIGNMENT STATEMENT');
 
-  outputParse(`  TRY - assignmentStatement()`);
+  var index = context++;
+  outputParse(`${indent(index)}TRY - assignmentStatement()`);
   var result = match([id, /\=/, expr]);
   if(result.isValid) {
-    outputParse(`  SUCCESS - assignmentStatement()`);
+    outputParse(`${indent(index)}SUCCESS - assignmentStatement()`);
+    context--;
+
     var assStmt = new node('', 'Assignment Statement');
+    assStmt.appendChild(result.nodes[0].node);
+    assStmt.appendChild(result.nodes[1].token, result.nodes[1].token.value);
+    assStmt.appendChild(result.nodes[2].node);
 
-    var idStmt = new node('', 'ID')
-    id.appendChild(new node(result.tokens[0], result.tokens[0].value));
-    assStmt.appendChild(id);
-
-    var eqSign = new node(result.tokens[1], result.tokens[1].value);
-    assStmt.appendChild(eqSign);
-
-    var exprStmt = new node(result.tokens[2], result.tokens[2].value);
-    expr.appendChild(cst.currentNode);
-    assStmt.appendChild(expr);
-
-    cst.currentNode = assStmt;
-    return true;
+    return assStmt;
   }else {
+    outputParse(`${indent(index)}Fail - assignmentStatement()`);
+    context--;
     return false;
   }
 
@@ -327,27 +429,37 @@ function assignmentStatement() {
 
 
 function varDecl() {
-  //console.log('PARSE VAR DECL');
-  outputParse(`  TRY - varDecl()`);
+  console.log('PARSE VAR DECL');
+
+  var index = context++;
+  outputParse(`${indent(index)}TRY - varDecl()`);
   var result = match([type, id]);
   if(result.isValid) {
-    outputParse(`  SUCCESS - varDecl()`);
+    outputParse(`${indent(index)}SUCCESS - varDecl()`);
+    context--;
+
     var varDecStmt = new node('', 'Var Decl');
-    varDecStmt.appendChild(cst.currentNode);
-    cst.currentNode = varDecStmt;
-    return true;
+    varDecStmt.appendChild(result.nodes[0].node);
+    varDecStmt.appendChild(result.nodes[1].node);
+
+    return varDecStmt;
   }else {
+    outputParse(`${indent(index)}Fail - varDecl()`);
+    context--;
     return false;
   }
 }
 
 
 function whileStatement() {
-  //console.log('PARSE WHILE STATEMENT');
-  outputParse(`  TRY - whileStatement()`);
+  console.log('PARSE WHILE STATEMENT');
+
+  var index = context++;
+  outputParse(`${indent(index)}TRY - whileStatement()`);
   var result = match(['while', booleanExpr, block]);
   if(result.isValid) {
-    outputParse(`  SUCCESS - whileStatement()`);
+    outputParse(`${indent(index)}SUCCESS - whileStatement()`);
+    context--;
 
     var whileStmt = new node('', 'While Statement');
     var whileVal = new node(result.tokens[0], result.tokens[0].value);
@@ -360,14 +472,18 @@ function whileStatement() {
     whileStmt.appendChild(blockStmt);
     cst.currentNode = whileStmt;
   }else {
+    outputParse(`${indent(index)}FAIL - whileStatement()`);
+    context--;
     return false;
   }
 }
 
 
 function ifStatement() {
-  //console.log('PARSE IF STATEMENT');
-  outputParse(`  TRY - ifStatement()`);
+  console.log('PARSE IF STATEMENT');
+
+  var index = context++;
+  outputParse(`${indent(index)}TRY - ifStatement()`);
   var result = match(['if', booleanExpr, block]);
   if(result.isValid) {
     var ifStmt = new node('', 'If Statement');
@@ -381,6 +497,10 @@ function ifStatement() {
     ifStmt.appendChild(boolEx);
     ifStmt.appendChild(blockStmt);
     cst.currentNode = ifStmt;
+  }else {
+    outputParse(`${indent(index)}FAIL - ifStatement()`);
+    context--;
+    return false;
   }
 }
 
@@ -388,44 +508,72 @@ function ifStatement() {
 function expr() {
   console.log('PARSE EXPR');
 
-  outputParse(`  TRY - expr()`);
+
+  var index = context++;
+  outputParse(`${indent(index)}TRY - expr()`);
   var exp = new node('', 'Expression')
+
+
   if(match([intExpr]).isValid) {
-    outputParse(`  SUCCESS - expr()`);
+    outputParse(`${indent(index)}SUCCESS - expr()`);
+    context--;
+
     exp.appendChild(cst.currentNode);
     cst.currentNode = exp;
     return true;
-  }else if(match([stringExpr]).isValid) {
-    outputParse(`  SUCCESS - expr()`);
-    exp.appendChild(cst.currentNode);
-    cst.currentNode = exp;
-    return true;
-  }else if(match([booleanExpr]).isValid) {
-    outputParse(`  SUCCESS - expr()`);
-    exp.appendChild(cst.currentNode);
-    cst.currentNode = exp;
-    return true;
-  }else if(match([id]).isValid) {
-    outputParse(`  SUCCESS - expr()`);
-    exp.appendChild(cst.currentNode);
-    cst.currentNode = exp;
-    return true;
-  }else {
-    return false;
   }
+
+  if(match([stringExpr]).isValid) {
+    outputParse(`${indent(index)}SUCCESS - expr()`);
+    context--;
+
+    exp.appendChild(cst.currentNode);
+    cst.currentNode = exp;
+    return true;
+  }
+
+  if(match([booleanExpr]).isValid) {
+    outputParse(`${indent(index)}SUCCESS - expr()`);
+    context--;
+
+    exp.appendChild(cst.currentNode);
+    cst.currentNode = exp;
+    return true;
+  }
+
+  var idRes = id();
+  if(idRes) {
+    outputParse(`${indent(index)}SUCCESS - expr()`);
+    context--;
+
+    exp.appendChild(idRes);
+    //cst.currentNode = exp;
+    return exp;
+  }
+
+  //Default
+  outputParse(`${indent(index)}FAIL - expr()`);
+  context--;
+  return false;
 }
 
 
 function intExpr() {
   console.log('PARSE INT EXPR');
 
-  outputParse(`  TRY - intExpr()`);
+  var index = context++;
+  outputParse(`${indent(index)}TRY - intExpr()`);
   if(match([digit, intOp, expr]).isValid) {
-    outputParse(`  SUCCESS - intExpr()`);
+    outputParse(`${indent(index)}SUCCESS - intExpr()`);
+    context--;
     return true;
   }else if(match([digit]).isValid) {
+    outputParse(`${indent(index)}SUCCESS - intExpr()`);
+    context--;
     return true;
   }else {
+    outputParse(`${indent(index)}FAIL - intExpr()`);
+    context--;
     return false;
   }
 }
@@ -434,9 +582,11 @@ function intExpr() {
 function stringExpr() {
   console.log('PARSE STRING EXPR');
 
-  outputParse(`  TRY - stringExpr()`);
+  var index = context++;
+  outputParse(`${indent(index)}TRY - stringExpr()`);
   if(match(['\"', charList, '\"']).isValid) {
-    outputParse(`  SUCCESS - stringExpr()`);
+    outputParse(`${indent(index)}SUCCESS - stringExpr()`);
+    context--;
     edges.push(edge(currentIndex, currentIndex+1));
     var lQuote = new node(tokenSet.shift(), '\"');
     edges.push(edge(currentIndex, currentIndex+1));
@@ -451,18 +601,23 @@ function stringExpr() {
 
     return true;
   }else {
+    outputParse(`${indent(index)}FAIL - stringExpr()`);
+    context--;
     return false;
   }
 }
 
 
 function booleanExpr() {
-  //console.log('PARSE BOOLEAN EXPR');
+  console.log('PARSE BOOLEAN EXPR');
 
-  outputParse(`  TRY - booleanExpr()`);
+  var index = context++;
+  outputParse(`${indent(index)}TRY - booleanExpr()`);
   var result = match([/^(\()$/, expr, /^(\))$/]);
   if(result.isValid) {
-    outputParse(`  SUCCESS - booleanExpr()`);
+    outputParse(`${indent(index)}SUCCESS - booleanExpr()`);
+    context--;
+
     edges.push(edge(currentIndex, currentIndex+1));
     var bool = new node('', 'Boolean');
     cst.currentNode.appendChild(bool);
@@ -475,6 +630,8 @@ function booleanExpr() {
 
     return true;
   }else {
+    outputParse(`${indent(index)}FAIL - booleanExpr()`);
+    context--;
     return false;
   }
 
@@ -484,13 +641,18 @@ function booleanExpr() {
 function id() {
   console.log('PARSE ID');
 
-  outputParse(`  TRY - id()`);
-  if(match([char]).isValid) {
-    outputParse(`  SUCCESS - id()`);
+  var index = context++;
+  outputParse(`${indent(index)}TRY - id()`);
+  var result = char();//match([char]);
+  console.log(result)
+  if(result) {
+    outputParse(`${indent(index)}SUCCESS - id()`);
+    context--;
+
     //edges.push(edge(currentIndex, currentIndex+1));
     var varid = new node('', 'ID');
-    varid.appendChild(cst.currentNode);
-    cst.currentNode = varid;
+    varid.appendChild(result);
+    //cst.currentNode = varid;
 
     //edges.push(edge(currentIndex, currentIndex+1));
     //var temp = tokenSet.shift();
@@ -498,8 +660,10 @@ function id() {
     //cst.currentNode.appendChild(varVal);
     //cst.currentNode = varVal;
 
-    return true;
+    return varid;
   }else {
+    outputParse(`${indent(index)}FAIL - id()`);
+    context--;
     return false;
   }
 }
@@ -508,9 +672,12 @@ function id() {
 function charList() {
   console.log('PARSE CHAR LIST');
 
-  utputParse(`  TRY - charList()`);
+  var index = context++;
+  outputParse(`${indent(index)}TRY - charList()`);
   if(matchConsume([char, charList])) {
-    outputParse(`  SUCCESS - charList()`);
+    outputParse(`${indent(index)}SUCCESS - charList()`);
+    context--;
+
     edges.push(edge(currentIndex, currentIndex+1));
     var chara = new node('', 'Char');
     edges.push(edge(currentIndex, currentIndex+1));
@@ -529,20 +696,41 @@ function charList() {
 }
 
 
-function type() {
-  //console.log('PARSE TYPE');
 
-  outputParse(`  TRY - type()`);
+
+
+
+
+
+
+
+
+/*Terminals*/
+function type() {
+  console.log('PARSE TYPE');
+  var index = context++;
+
+  outputParse(`${indent(index)}TRY - type()`);
   var result = match([/^(int|string|boolean)$/]);
   if(result.isValid) {
-    outputParse(`  SUCCESS - type()`);
-    var typeVal = new node(result.tokens[0], result.tokens[0].value);
+    outputParse(`${indent(index)}SUCCESS - type()`);
+    context--;
+
+    /*
+    var typeVal = new node(result.nodes[0].token, result.nodes[0].token.value);
     typeVal.appendChild(cst.currentNode);
     var typeNode = new node('', 'Type');
     typeNode.appendChild(typeVal);
+    */
 
-    return true;
+    var typeNode = new node('', 'Type');
+    var typeVal = new node(result.nodes[0].token, result.nodes[0].token.value);
+    typeNode.appendChild(typeVal);
+
+    return typeNode;
   }else {
+    outputParse(`${indent(index)}FAIL - type()`);
+    context--;
     return false;
   }
 
@@ -551,52 +739,66 @@ function type() {
 
 function char() {
   console.log('PARSE CHAR');
-  outputParse(`  TRY - char()`);
+
+  var index = context++;
+  outputParse(`${indent(index)}TRY - char()`);
   var result = match([/^[a-z]$/]);
   if(result.isValid) {
-    //edges.push(edge(currentIndex, currentIndex+1));
-    //cst.currentNode.children = [];
 
-    outputParse(`  SUCCESS - char()`);
-    var charNode = new node(result.tokens[0], result.tokens[0].value);
-    //charNode.appendChild(cst.currentNode);
-    //charNode.parent = null;
-    cst.currentNode = charNode;
+    outputParse(`${indent(index)}SUCCESS - char()`);
+    context--;
 
-    //edges.push(edge(currentIndex, currentIndex+1));
+    console.log(result)
+    var charNode = new node('', 'Char');
+    var charVal = new node(result.nodes[0].token, result.nodes[0].token.value);
+    charNode.appendChild(charVal);
 
 
-    return true;
+    return charNode;
   }else {
+    outputParse(`${indent(index)}FAIL - char()`);
+    context--;
     return false;
   }
 }
 
 
 function space() {
-  //console.log('PARSE SPACE');
-  outputParse(`  TRY - space()`);
-  return matchConsume([/\s/]);
+  console.log('PARSE SPACE');
+
+  var index = context++;
+  outputParse(`${indent(index)}TRY - space()`);
+  var result = match([/\s/]);
+  if(result.isValid) {
+    var spaceNode = new node('', 'Space');
+    var spaceVal = new node(result.nodes[0].token, result.nodes[0].token.value);
+    spaceVal.appendChild(spaceNode);
+    return spaceNode;
+  }
+  outputParse(`${indent(index)}FAIL - space()`);
+  context--;
+  return false;
 }
 
 
 function digit() {
   console.log('PARSE DIGIT');
-  outputParse(`  TRY - digit()`);
-  if(match([/^[0-9]$/]).isValid) {
-    outputParse(`  SUCCESS - digit()`);
-    edges.push(edge(currentIndex, currentIndex+1));
-    var digit = node('', 'Digit');
-    cst.currentNode.appendChild(digit);
-    cst.currentNode = digit;
 
-    edges.push(edge(currentIndex, currentIndex+1));
-    var temp = tokenSet.shift();
-    var val = node(temp, temp.value);
-    cst.currentNode.appendChild(val);
+  var index = context++;
+  outputParse(`${indent(index)}TRY - digit()`);
+  var result = match([/^[0-9]$/]);
+  if(result.isValid) {
+    outputParse(`${indent(index)}SUCCESS - digit()`);
+    context--;
 
-    return true;
+    var digitNode = new node('', 'Digit');
+    var digitVal = new node(result.nodes[0].token, result.nodes[0].token.value);
+    digitVal.appendChild(digitNode);
+
+    return digitNode;
   }else {
+    outputParse(`${indent(index)}FAIL - digit()`);
+    context--;
     return false;
   }
 }
@@ -604,29 +806,71 @@ function digit() {
 
 function boolOp() {
   //console.log('PARSE BOOL OP');
-  outputParse(`  TRY - boolOp()`);
-  return matchConsume([/^(==|!=)$/]);
+  outputParse(`${indent(index)}TRY - boolOp()`);
+  var result = match([/^(==|!=)$/]);
+  if(result.isValid) {
+    outputParse(`${indent(index)}SUCCESS - boolOp()`);
+    context--;
+
+    var boolNode = new node('', 'Boolean');
+    var boolVal = new node(result.nodes[0].token, result.nodes[0].token.value);
+    boolVal.appendChild(boolNode);
+
+    return boolNode;
+  }else {
+    outputParse(`${indent(index)}FAIL - boolOp()`);
+    context--;
+    return false;
+  }
 }
 
 function boolVal() {
   //console.log('PARSE BOOL VAL');
-  outputParse(`  TRY - boolVal()`);
-  return matchConsume([/^(false|true)$/]);
+  outputParse(`${indent(index)}TRY - boolVal()`);
+  var result = match([/^(false|true)$/]);
+  if(result.isValid) {
+    outputParse(`${indent(index)}SUCCESS - boolVal()`);
+    context--;
+
+    var boolNode = new node('', 'Boolean');
+    var boolVal = new node(result.nodes[0].token, result.nodes[0].token.value);
+    boolVal.appendChild(boolNode);
+
+    return boolNode;
+  }else {
+    outputParse(`${indent(index)}FAIL - boolVal()`);
+    context--;
+    return false;
+  }
 }
 
 
 function intOp() {
   console.log('PARSE INT OP');
-  outputParse(`  TRY - intOp()`);
-  if(match([/^\+$/]).isValid) {
-    outputParse(`  SUCCESS - intOp()`);
-    edges.push(edge(currentIndex, currentIndex+1));
-    var temp = tokenSet.shift();
-    var intop = node(temp, temp.value);
-    cst.currentNode.appendChild(intop);
 
-    return true;
+  var index = context++;
+  outputParse(`${indent(index)}TRY - intOp()`);
+  var result = match([/^\+$/]);
+  if(result.isValid) {
+    outputParse(`${indent(index)}SUCCESS - intOp()`);
+    context--;
+
+    var intOpNode = new node('', 'IntOp');
+    var intOpVal = new node(result.nodes[0].token, result.nodes[0].token.value);
+    intOpVal.appendChild(intOpNode);
+
+    return intOpNode;
   }else {
+    outputParse(`${indent(index)}FAIL - intOp()`);
+    context--;
     return false;
   }
+}
+
+function indent(n) {
+  var str = "";
+  for(var i = 0; i < n; i++) {
+    str += "-";
+  }
+  return str;
 }
