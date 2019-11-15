@@ -215,21 +215,21 @@ function outputCST(info) {
 
 
 document.addEventListener('DOMContentLoaded', () => {
-  document.querySelector('#input').value = `/* This statement shows that addition
-- checking and printing are both valid
-- options that can be performed. Credit: Tien
-- Result: 666addition checkfalse*/
+  document.querySelector('#input').value = `/* Test case for IfStatement. Prints numsidsstringsbooleans */
 {
-int a
-while (a != 3) {
-print(1 + 2 + 3)
-a = 1 + a
-}
-if (1+1+1+1+1 == 2+3) {
-print("addition check")
-}
-if (1+5+3 != 8) {
-print(false)
-}
+    int a
+    a = 1
+    if(1 == 1){
+        print("nums")
+    }
+    if(a == a){
+        print("ids")
+    }
+    if("hey" == "hey"){
+        print("strings")
+    }
+    if(true == true){
+        print("booleans")
+    }
 } $`//"{stringaa=\"hello\"print(a)}$";
 });

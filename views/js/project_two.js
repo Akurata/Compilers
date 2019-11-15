@@ -584,7 +584,7 @@ function intOp() {
     outputParse(`${indent(index)}SUCCESS - intOp()`);
     context--;
     var intOpNode = new node('', 'IntOp');
-    var intOpVal = new node(result.nodes[0].token, result.nodes[0].token.value, 'stem');
+    var intOpVal = new node(result.nodes[0].token, result.nodes[0].token.value, 'leaf');
     intOpNode.appendChild(intOpVal);
     return intOpNode;
   }else {
