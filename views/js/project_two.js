@@ -150,7 +150,7 @@ function statementList() {
   var index = context++;
   outputParse(`${indent(index)}TRY - statementList()`);
   var result = match([statement, statementList]);
-  var stmtList = new node('', 'StatementList');
+  var stmtList = new node('', 'StmtList');
   if(result.isValid) {
     outputParse(`${indent(index)}SUCCESS - statementList()`);
     context--;
@@ -168,7 +168,7 @@ function statementList() {
 function statement() {
   var index = context++;
   outputParse(`${indent(index)}TRY - statement()`);
-  var stmt = new node('', 'Statement');
+  var stmt = new node('', 'Stmt');
   var printRes = match([printStatement]);
   if(printRes.isValid) {
     outputParse(`${indent(index)}SUCCESS - statement()`);
@@ -224,7 +224,7 @@ function printStatement() {
   if(result.isValid) {
     outputParse(`${indent(index)}SUCCESS - printStatement()`);
     context--;
-    var printStmt = new node('', 'Print Statement', 'stem');
+    var printStmt = new node('', 'PrintStmt', 'stem');
     printStmt.appendChild(new node(result.nodes[0].token, result.nodes[0].token.value));
     printStmt.appendChild(new node(result.nodes[1].token, result.nodes[1].token.value));
     printStmt.appendChild(result.nodes[2].node);
@@ -244,7 +244,7 @@ function assignmentStatement() {
   if(result.isValid) {
     outputParse(`${indent(index)}SUCCESS - assignmentStatement()`);
     context--;
-    var assStmt = new node('', 'Assignment Statement', 'stem');
+    var assStmt = new node('', 'AssignStmt', 'stem');
     assStmt.appendChild(result.nodes[0].node);
     assStmt.appendChild(new node(result.nodes[1].token, result.nodes[1].token.value));
     assStmt.appendChild(result.nodes[2].node);
@@ -263,7 +263,7 @@ function varDecl() {
   if(result.isValid) {
     outputParse(`${indent(index)}SUCCESS - varDecl()`);
     context--;
-    var varDecStmt = new node('', 'Var Decl', 'stem');
+    var varDecStmt = new node('', 'VarDecl', 'stem');
     varDecStmt.appendChild(result.nodes[0].node);
     varDecStmt.appendChild(result.nodes[1].node);
     return varDecStmt;
@@ -281,8 +281,8 @@ function whileStatement() {
   if(result.isValid) {
     outputParse(`${indent(index)}SUCCESS - whileStatement()`);
     context--;
-    var whileStmt = new node('', 'While Statement', 'stem');
-    whileStmt.appendChild(result.nodes[0].token, result.nodes[0].token.value);
+    var whileStmt = new node('', 'WhileStmt', 'stem');
+    whileStmt.appendChild(new node(result.nodes[0].token, result.nodes[0].token.value));
     whileStmt.appendChild(result.nodes[1].node);
     whileStmt.appendChild(result.nodes[2].node);
     return whileStmt;
@@ -298,7 +298,7 @@ function ifStatement() {
   outputParse(`${indent(index)}TRY - ifStatement()`);
   var result = match(['if', booleanExpr, block]);
   if(result.isValid) {
-    var ifStmt = new node('', 'If Statement', 'stem');
+    var ifStmt = new node('', 'IfStmt', 'stem');
     ifStmt.appendChild(new node(result.nodes[0].token, result.nodes[0].token.value));
     ifStmt.appendChild(result.nodes[1].node);
     ifStmt.appendChild(result.nodes[2].node);
@@ -313,7 +313,7 @@ function ifStatement() {
 function expr() {
   var index = context++;
   outputParse(`${indent(index)}TRY - expr()`);
-  var exp = new node('', 'Expression')
+  var exp = new node('', 'Expr')
   var intRes = match([intExpr]);
   if(intRes.isValid) {
     outputParse(`${indent(index)}SUCCESS - expr()`);
@@ -352,7 +352,7 @@ function intExpr() {
   var index = context++;
   outputParse(`${indent(index)}TRY - intExpr()`);
   var resInt;
-  var intNode = new node('', 'Int Expression');
+  var intNode = new node('', 'IntExpr');
   resInt = match([digit, intOp, expr]);
   if(resInt.isValid) {
     outputParse(`${indent(index)}SUCCESS - intExpr()`);
@@ -381,10 +381,10 @@ function stringExpr() {
   if(result.isValid) {
     outputParse(`${indent(index)}SUCCESS - stringExpr()`);
     context--;
-    var strNode = new node('', 'String Expression');
-    strNode.appendChild(new node(result.nodes[0].token, result.nodes[0].token.value));
+    var strNode = new node('', 'StringExpr');
+    strNode.appendChild(new node(result.nodes[0].token, result.nodes[0].token.value, 'leaf'));
     strNode.appendChild(result.nodes[1].node);
-    strNode.appendChild(new node(result.nodes[2].token, result.nodes[2].token.value));
+    strNode.appendChild(new node(result.nodes[2].token, result.nodes[2].token.value, 'leaf'));
     return strNode;
   }else {
     outputParse(`${indent(index)}FAIL - stringExpr()`);
@@ -400,7 +400,7 @@ function booleanExpr() {
   if(boolExprRes.isValid) {
     outputParse(`${indent(index)}SUCCESS - booleanExpr()`);
     context--;
-    var bool = new node('', 'Boolean Expr');
+    var bool = new node('', 'BooleanExpr', 'stem');
     bool.appendChild(new node(boolExprRes.nodes[0].token, boolExprRes.nodes[0].token.value));
     bool.appendChild(boolExprRes.nodes[1].node);
     bool.appendChild(boolExprRes.nodes[2].node);
@@ -442,7 +442,7 @@ function id() {
 function charList() {
   var index = context++;
   outputParse(`${indent(index)}TRY - charList()`);
-  var charNode = new node('', 'Char List');
+  var charNode = new node('', 'CharList');
   var alpha = match([char, charList]);
   if(alpha.isValid) {
     outputParse(`${indent(index)}SUCCESS - charList()`);
@@ -549,7 +549,7 @@ function boolOp() {
     context--;
     var boolNode = new node('', 'Boolean');
     var boolVal = new node(result.nodes[0].token, result.nodes[0].token.value, 'leaf');
-    boolVal.appendChild(boolNode);
+    boolNode.appendChild(boolVal);
     return boolNode;
   }else {
     outputParse(`${indent(index)}FAIL - boolOp()`);
@@ -584,8 +584,8 @@ function intOp() {
     outputParse(`${indent(index)}SUCCESS - intOp()`);
     context--;
     var intOpNode = new node('', 'IntOp');
-    var intOpVal = new node(result.nodes[0].token, result.nodes[0].token.value, 'leaf');
-    intOpVal.appendChild(intOpNode);
+    var intOpVal = new node(result.nodes[0].token, result.nodes[0].token.value, 'stem');
+    intOpNode.appendChild(intOpVal);
     return intOpNode;
   }else {
     outputParse(`${indent(index)}FAIL - intOp()`);
