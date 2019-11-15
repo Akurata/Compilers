@@ -1,9 +1,12 @@
 
 var currentIndex = 0;
-function node(token, value) {
+function node(token, value, type) {
   this.node = {};
   this.node.id = currentIndex++;
   this.node.token = token;
+  if(type) {
+    this.node.type = type;
+  }
   this.node.text = {
     name: `${value}`,
   };
@@ -25,13 +28,6 @@ function node(token, value) {
     return pool.find((item, i) => {if(item === this.node) {return pool[i+1];}});
   }
   return this.node;
-}
-
-function edge(from, to) {
-  var edge = {};
-  edge.from = from;
-  edge.to = to;
-  return edge;
 }
 
 var cstContainer = document.querySelector('#output_cst');
@@ -71,6 +67,7 @@ function parse(programTokens, p) {
     },
     nodeStructure: cst
   });
+  semanticAnalysis(cst, p);
 }
 
 function match(targetTokens) {
@@ -137,7 +134,7 @@ function block() {
   if(result.isValid) {
     outputParse(`${indent(index)}SUCCESS - block()`);
     context--;
-    var blockNode = new node('', 'Block');
+    var blockNode = new node('', 'Block', 'stem');
     blockNode.appendChild(new node(result.nodes[0].token, result.nodes[0].token.value));
     blockNode.appendChild(result.nodes[1].node);
     blockNode.appendChild(new node(result.nodes[2].token, result.nodes[2].token.value));
@@ -227,7 +224,7 @@ function printStatement() {
   if(result.isValid) {
     outputParse(`${indent(index)}SUCCESS - printStatement()`);
     context--;
-    var printStmt = new node('', 'Print Statement');
+    var printStmt = new node('', 'Print Statement', 'stem');
     printStmt.appendChild(new node(result.nodes[0].token, result.nodes[0].token.value));
     printStmt.appendChild(new node(result.nodes[1].token, result.nodes[1].token.value));
     printStmt.appendChild(result.nodes[2].node);
@@ -247,7 +244,7 @@ function assignmentStatement() {
   if(result.isValid) {
     outputParse(`${indent(index)}SUCCESS - assignmentStatement()`);
     context--;
-    var assStmt = new node('', 'Assignment Statement');
+    var assStmt = new node('', 'Assignment Statement', 'stem');
     assStmt.appendChild(result.nodes[0].node);
     assStmt.appendChild(new node(result.nodes[1].token, result.nodes[1].token.value));
     assStmt.appendChild(result.nodes[2].node);
@@ -266,7 +263,7 @@ function varDecl() {
   if(result.isValid) {
     outputParse(`${indent(index)}SUCCESS - varDecl()`);
     context--;
-    var varDecStmt = new node('', 'Var Decl');
+    var varDecStmt = new node('', 'Var Decl', 'stem');
     varDecStmt.appendChild(result.nodes[0].node);
     varDecStmt.appendChild(result.nodes[1].node);
     return varDecStmt;
@@ -284,7 +281,7 @@ function whileStatement() {
   if(result.isValid) {
     outputParse(`${indent(index)}SUCCESS - whileStatement()`);
     context--;
-    var whileStmt = new node('', 'While Statement');
+    var whileStmt = new node('', 'While Statement', 'stem');
     whileStmt.appendChild(result.nodes[0].token, result.nodes[0].token.value);
     whileStmt.appendChild(result.nodes[1].node);
     whileStmt.appendChild(result.nodes[2].node);
@@ -301,7 +298,7 @@ function ifStatement() {
   outputParse(`${indent(index)}TRY - ifStatement()`);
   var result = match(['if', booleanExpr, block]);
   if(result.isValid) {
-    var ifStmt = new node('', 'If Statement');
+    var ifStmt = new node('', 'If Statement', 'stem');
     ifStmt.appendChild(new node(result.nodes[0].token, result.nodes[0].token.value));
     ifStmt.appendChild(result.nodes[1].node);
     ifStmt.appendChild(result.nodes[2].node);
@@ -452,6 +449,7 @@ function charList() {
     context--;
     charNode.appendChild(alpha.nodes[0].node);
     charNode.appendChild(alpha.nodes[1].node);
+    return charNode;
   }
   var beta = match([space, charList]);
   if(beta.isValid) {
@@ -459,13 +457,15 @@ function charList() {
     context--;
     charNode.appendChild(beta.nodes[0].node);
     charNode.appendChild(beta.nodes[1].node);
+    return charNode
   }else {
     outputParse(`${indent(index)}SUCCESS - charList(\u03B5)`);
     context--;
     var eps = new node('', '\u03B5');
     charNode.appendChild(eps);
+    return charNode;
   }
-  return charNode;
+
 }
 
 
@@ -478,7 +478,7 @@ function type() {
     outputParse(`${indent(index)}SUCCESS - type()`);
     context--;
     var typeNode = new node('', 'Type');
-    var typeVal = new node(result.nodes[0].token, result.nodes[0].token.value);
+    var typeVal = new node(result.nodes[0].token, result.nodes[0].token.value, 'leaf');
     typeNode.appendChild(typeVal);
     return typeNode;
   }else {
@@ -496,7 +496,7 @@ function char() {
     outputParse(`${indent(index)}SUCCESS - char(${result.nodes[0].token.value})`);
     context--;
     var charNode = new node('', 'Char');
-    var charVal = new node(result.nodes[0].token, result.nodes[0].token.value);
+    var charVal = new node(result.nodes[0].token, result.nodes[0].token.value, 'leaf');
     charNode.appendChild(charVal);
     return charNode;
   }else {
@@ -530,7 +530,7 @@ function digit() {
     outputParse(`${indent(index)}SUCCESS - digit()`);
     context--;
     var digitNode = new node('', 'Digit');
-    var digitVal = new node(result.nodes[0].token, result.nodes[0].token.value);
+    var digitVal = new node(result.nodes[0].token, result.nodes[0].token.value, 'leaf');
     digitNode.appendChild(digitVal);
     return digitNode;
   }else {
@@ -548,7 +548,7 @@ function boolOp() {
     outputParse(`${indent(index)}SUCCESS - boolOp()`);
     context--;
     var boolNode = new node('', 'Boolean');
-    var boolVal = new node(result.nodes[0].token, result.nodes[0].token.value);
+    var boolVal = new node(result.nodes[0].token, result.nodes[0].token.value, 'leaf');
     boolVal.appendChild(boolNode);
     return boolNode;
   }else {
@@ -566,7 +566,7 @@ function boolVal() {
     outputParse(`${indent(index)}SUCCESS - boolVal()`);
     context--;
     var boolNode = new node('', 'Boolean');
-    var boolVal = new node(result.nodes[0].token, result.nodes[0].token.value);
+    var boolVal = new node(result.nodes[0].token, result.nodes[0].token.value, 'leaf');
     boolNode.appendChild(boolVal);
     return boolNode;
   }else {
@@ -584,7 +584,7 @@ function intOp() {
     outputParse(`${indent(index)}SUCCESS - intOp()`);
     context--;
     var intOpNode = new node('', 'IntOp');
-    var intOpVal = new node(result.nodes[0].token, result.nodes[0].token.value);
+    var intOpVal = new node(result.nodes[0].token, result.nodes[0].token.value, 'leaf');
     intOpVal.appendChild(intOpNode);
     return intOpNode;
   }else {

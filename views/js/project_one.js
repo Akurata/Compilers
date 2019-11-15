@@ -215,5 +215,5 @@ function outputCST(info) {
 
 
 document.addEventListener('DOMContentLoaded', () => {
-  document.querySelector('#input').value = "{print(a)}$";
+  document.querySelector('#input').value = "{intaa=1print(a)}$";
 });

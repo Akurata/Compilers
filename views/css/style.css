@@ -1305,7 +1305,7 @@ footer .credits a {
 }
 
 
-#output_cst {
+#output_cst, #output_ast, #output_symbol_table {
   height: 55vh;
   border: 1px solid lightgray;
 }
