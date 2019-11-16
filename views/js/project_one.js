@@ -53,6 +53,7 @@ var lastToken = {};
 var tokens = {};
 
 function lex(input) {
+  resetAll();
   tokens = {};
   lastToken = {};
   document.querySelector('#output_lex').innerHTML = ''; //Clear Output
@@ -116,7 +117,13 @@ function lex(input) {
             didUpdate = true;
 
             start = end;
-            end++;
+            if(p[end+1] == "$") {
+              error = true;
+              outputLex(`ERROR LEXER - Unterminated string at (${row}:${col}) via 105`);
+              break;
+            }else {
+              end++;
+            }
 
           }else { //Otherwise build tokens
             while(end <= p.length) {
@@ -213,23 +220,53 @@ function outputCST(info) {
   document.querySelector('#output_cst').innerHTML += `\n${info}`;
 }
 
+function outputSA(info) {
+  document.querySelector('#output_sa_errors').innerHTML += `\n${info}`;
+}
 
 document.addEventListener('DOMContentLoaded', () => {
-  document.querySelector('#input').value = `/* Test case for IfStatement. Prints numsidsstringsbooleans */
+  document.querySelector('#input').value = `/*
+Demonstrates compiler's ability to generate code that properly handles variable addition
+Credit: Tien
+*/
 {
-    int a
-    a = 1
-    if(1 == 1){
-        print("nums")
-    }
-    if(a == a){
-        print("ids")
-    }
-    if("hey" == "hey"){
-        print("strings")
-    }
-    if(true == true){
-        print("booleans")
-    }
-} $`//"{stringaa=\"hello\"print(a)}$";
+int a
+a = 1
+int b
+b = 1
+b = 1 + a
+while (2 + a != 3 + b) {
+a = 1 + a
+print("int a is ")
+print(a)
+print(" ")
+}
+print("int b is ")
+print(b)
+}$`//"{stringaa=\"hello\"print(a)}$";
 });
+
+
+function resetAll() {
+  document.querySelector('#output_lex').innerHTML = "";
+  document.querySelector('#output_parse').innerHTML = "";
+  document.querySelector('#output_cst').innerHTML = "";
+  document.querySelector('#output_sa_errors').innerHTML = "";
+  var saWrap = document.querySelector('#output_symbol_table');
+  while(saWrap.hasChildNodes()) {
+    saWrap.removeChild(saWrap.firstChild);
+  }
+  cstTree;
+  tokenSet;
+  curr = 0;
+  context = 0;
+  cst = {};
+  edges = [];
+  list = [];
+  start = 0;
+  charArray = [];
+  ast = new stem('Root');
+  current = ast;
+  scopes = [];
+  refs = [];
+}

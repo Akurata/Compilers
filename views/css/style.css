@@ -1297,6 +1297,12 @@ footer .credits a {
   max-width: 85%;
 }
 
+.sa {
+  padding: inherit;
+  padding-top: 2rem !important;
+  padding-bottom: 2rem !important;
+  overflow-y: auto;
+}
 
 
 
@@ -1304,8 +1310,12 @@ footer .credits a {
   display: flex;
 }
 
+#output_symbol_table_wrap, #output_sa_errors {
+  height: 20vh;
+  border: 1px solid lightgray;
+}
 
-#output_cst, #output_ast, #output_symbol_table {
+#output_cst, #output_ast {
   height: 55vh;
   border: 1px solid lightgray;
 }
