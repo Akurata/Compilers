@@ -1,18 +1,17 @@
 
-var refs = [];
-var scopes = [];
+var errs = false;
 function scopeCheck(id) {
   console.log(ast)
-  var errs = false;
   var currentScope = new scope();
   var scopeTree = currentScope;
   var varEntry;
   for(var i = 0; i < list.length; i++) {
     if(list[i].name.match(/^(int|string|boolean)$/)) { //Identify new variable declerations
       if(list[i+1].key === "ID") { //Check for name
-        varEntry = new variable(list[i].name, list[i+1].name);
+        varEntry = new variable(list[i].name, list[i+1].name, list[i+1].token);
         if(!currentScope.values[list[i+1].name]) { //Check if variable does not already exist in current scope
           currentScope.values[list[i+1].name] = varEntry;
+          i++;
         }else { //Else variable exists in current scope
           errs = true;
           console.log(list[i+1])
@@ -30,11 +29,41 @@ function scopeCheck(id) {
       }
     }else if(list[i].name === "EndBlock") { //End current scope
       currentScope = currentScope.parentScope;
+    }else if(list[i].name === "AssignStmt") { //Validate type matches on assign statements
+      var subContext = i+1;
+      var find = checkParentScopes(currentScope, list[i+1].name);
+      if(find) {
+        while(list[subContext].name !== "EndAssignStmt") {
+          if(list[subContext].key !== "SYMBOL" && list[subContext].key !== "ID") {
+            if(find.type === "int") {
+              if(list[subContext].key !== "DIGIT") {
+                errs = true;
+                outputSA(`ERROR - Type Mismatch for ${list[i].name} - expected typeof ${find.type} (${find.token.row}:${find.token.col})`);
+              }
+            }else if(find.type === "string") {
+              if(list[subContext].key !== "STRING") {
+                errs = true;
+                outputSA(`ERROR - Type Mismatch for ${list[i].name} - expected typeof ${find.type} (${find.token.row}:${find.token.col})`);
+              }
+            }else if(find.type === "boolean") {
+              if(list[subContext].name !== "false" || list[subContext].name !== "true") {
+                errs = true;
+                outputSA(`ERROR - Type Mismatch for ${list[i].name} - expected typeof ${find.type} (${find.token.row}:${find.token.col})`);
+              }
+            }
+          }
+          subContext++;
+        }
+      }else {
+        errs = true;
+        outputSA(`ERROR - Variable not declared in scope (${list[i].tokens.row}:${list[i].tokens.col})`)
+      }
     }
   }
   if(!errs) {
+    console.log(scopeTree)
     printScopeTree(scopeTree);
-    outputSA(`INFO LEXER - Successfully completed semantic analysis on program ${id}`)
+    outputSA(`\nINFO SemanticAnalysis - Successfully completed semantic analysis on program ${id}`)
   }
 }
 
@@ -52,8 +81,18 @@ function printScopeTree(scopeTree) {
       var name = document.createElement('td');
       name.innerHTML = val;
       row.appendChild(name);
-      console.log(row)
+      var varRow = document.createElement('td');
+      varRow.innerHTML = stree.values[val].token.row;
+      row.appendChild(varRow);
+      var varCol = document.createElement('td');
+      varCol.innerHTML = stree.values[val].token.col;
+      row.appendChild(varCol);
       document.getElementById('output_symbol_table').appendChild(row);
+
+
+      if(!stree.values[val].interaction) { //Check if a var is initialized but never used.
+        outputSA(`WARNING - Variable ${stree.values[val].name} is declared but never used (${stree.values[val].token.row}:${stree.values[val].token.col}).\n`)
+      }
     });
   }
   if(stree.children) {
@@ -69,12 +108,29 @@ function checkParentScopes(scope, target) {
   var found = false;
   while(!found && testScope.parentScope) {
     if(testScope.values[target]) {
-      found = true;
+      testScope.values[target].interaction = true; //Set this var marked as accessed
+      found = testScope.values[target];
     }else {
       testScope = testScope.parentScope;
     }
   }
   return found;
+}
+
+function checkUnusedVar(scope) {
+  var testScope = scope;
+  var result = false;
+  if(testScope.children.length > 0) {
+    Object.keys(testScope.values).forEach((val) => {
+      if(!testScope.values[val].interaction) {
+        result = testScope.values[val];
+      }
+    });
+    testScope.children.forEach((child) => {
+      checkUnusedVar(child);
+    });
+  }
+  return result;
 }
 
 
@@ -95,10 +151,12 @@ function scope() {
   return scopeEntry;
 }
 
-function variable(type, name, value) {
+function variable(type, name, token, value) {
   var variableEntry = {};
   variableEntry.type = type;
   variableEntry.name = name;
+  variableEntry.token = token;
   variableEntry.value = value;
+  variableEntry.interaction = false;
   return variableEntry;
 }

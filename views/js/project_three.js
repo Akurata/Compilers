@@ -218,7 +218,6 @@ function operationExpr(matchString) {
   var link = null;
   var vals = [];
   var length = 0;
-  console.log(list[start].name)
   while(list[start].name !== matchString) { //Determine range of tokens
     length++;
     if(list[start].key === "KEYWORDS" && list[start].name !== 'true' && list[start].name !== 'false' || list[start].key === "SYMBOL") { //If matched bool/int op

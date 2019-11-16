@@ -73,25 +73,26 @@ function parse(programTokens, p) {
 function match(targetTokens) {
   var valid = {
     isValid: true,
-    nodes: []
+    nodes: [],
+    errs: []
   };
   for(var i = 0; i < targetTokens.length; i++) {
     var check = null;
     var target = null;
     var isTerminal = typeof targetTokens[i] === 'function';
-    if(isTerminal) {
-      target = targetTokens[i]();
+    if(isTerminal) { //Check if is terminal
+      target = targetTokens[i](); //Call nested nonterminal
       if(target) {
         check = true;
       }else {
         check = false
       }
-    }else if(curr > tokenSet.length) {
+    }else if(curr > tokenSet.length) { //If the parser ran out of tokens to check, return false
       check = false;
-    }else {
+    }else { //Otherwise check regex string/terminal against target tokens
       check = tokenSet[curr].value.match(targetTokens[i]);
     }
-    if(check) {
+    if(check) { //Append valid nodes if it passes
       if(target) {
         valid.nodes.push({node: target})
       }else {
@@ -142,6 +143,7 @@ function block() {
   }else {
     outputParse(`${indent(index)}FAIL - block()`);
     context--;
+    outputParse(`ERROR - Expected Block - found ${tokenSet[curr].value} (${tokenSet[curr].row}:${tokenSet[curr].col})`);
     return false;
   }
 }
