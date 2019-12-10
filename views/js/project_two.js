@@ -493,7 +493,7 @@ function type() {
 function char() {
   var index = context++;
   outputParse(`${indent(index)}TRY - char()`);
-  var result = match([/^[a-z]$/]);
+  var result = match([/^[a-z\s]$/]);
   if(result.isValid) {
     outputParse(`${indent(index)}SUCCESS - char(${result.nodes[0].token.value})`);
     context--;

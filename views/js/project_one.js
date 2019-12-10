@@ -18,7 +18,7 @@ var lexer_syntax = { //Predefined syntax for regex matching
   },
   char: {
     priority: 1,
-    values: /^[a-z]$/
+    values: /^[a-z\s]$/
   },
   comment: {
     priority: 0,
@@ -43,7 +43,8 @@ var lexer_index = { //Index for token generateion + output
   'boolean': 'BOOL_DECL',
   'true': 'BOOL_TRUE',
   'false': 'BOOL_FALSE',
-  '\n': 'WHITESPACE',
+  '\n': 'NEW_LINE',
+  '\s': 'SPACE',
   '{': 'L_BRACE',
   '}': 'R_BRACE',
   '$': 'EOP'
@@ -96,36 +97,40 @@ function lex(input) {
         row++;
         col = 0;
         end++;
-      }else if(p[start].match(/\S/)){
-          if(lastToken.value === '\"') {
-            quotes++;
+      }else {
+        if(lastToken.value === '\"') {
+          quotes++;
+        }
+
+        if(quotes > 0 && quotes%2 !== 0) { //Detect and build strings
+          if(p[end].match(/([A-Z]|[0-9])/g)) { //Catch errors in strings
+            console.log('err 1')
+            error = true;
+            outputLex(`ERROR LEXER - Unexpected Character [${JSON.stringify(p[end])}] at (${row}:${col}) via 105`);
+            break;
           }
 
-          if(quotes > 0 && quotes%2 !== 0) { //Detect and build strings
-            if(p[end].match(/([A-Z]|[0-9])/g)) { //Catch errors in strings
-              error = true;
-              outputLex(`ERROR LEXER - Unexpected Character [${JSON.stringify(p[end])}] at (${row}:${col}) via 105`);
-              break;
-            }
+          bestCandidate.key = 'CHAR';
+          bestCandidate.priority = 1;
+          bestCandidate.value = p[end];
+          bestCandidate.col = col;
+          bestCandidate.row = row;
+          bestCandidate.endIndex = end;
+          didUpdate = true;
 
-            bestCandidate.key = 'CHAR';
-            bestCandidate.priority = 1;
-            bestCandidate.value = p[end];
-            bestCandidate.col = col;
-            bestCandidate.row = row;
-            bestCandidate.endIndex = end;
-            didUpdate = true;
+          start = end;
+          if(p[end+1] == "$") {
+            console.log('err 2')
+            error = true;
+            outputLex(`ERROR LEXER - Unterminated string at (${row}:${col}) via 105`);
+            break;
+          }else {
+            end++;
+          }
 
-            start = end;
-            if(p[end+1] == "$") {
-              error = true;
-              outputLex(`ERROR LEXER - Unterminated string at (${row}:${col}) via 105`);
-              break;
-            }else {
-              end++;
-            }
+        }else { //Otherwise build tokens
 
-          }else { //Otherwise build tokens
+          if(p[start].match(/\S/)) {
             while(end <= p.length) {
               currentString = p.substring(start, end+1);
               Object.keys(lexer_syntax).forEach((key) => {
@@ -146,24 +151,31 @@ function lex(input) {
               }
               end++;
             }
+          }else {
+            end++;
           }
 
-          col += bestCandidate.value.length;
+        }
 
-          if(didUpdate && !error) {
-            //console.log(`LAST TOKEN: ${lastToken.value}`);
-            //console.log(`CURRENT TOKEN: ${bestCandidate.value}`);
-            createToken(bestCandidate, id);
-          }else if(!currentString[0].match(/\s/)) { //Catch errors for characters/symbols that do not exist in grammar
-            error = true;
-            for(var i = 0; i < currentString.length; i++) {
-              if(!currentString[i].match(/\s/)) {
-                outputLex(`ERROR LEXER - Unexpected Character [ ${currentString[i]} ] at (${row}:${col+i}) via 156`);
-                row += currentString.split(/\n/).length - 1;
-                break;
-              }
+        col += bestCandidate.value.length;
+
+        if(didUpdate && !error) {
+          //console.log(`LAST TOKEN: ${lastToken.value}`);
+          //console.log(`CURRENT TOKEN: ${bestCandidate.value}`);
+          createToken(bestCandidate, id);
+        }else if(currentString[0].match(/\s/)) { //Catch errors
+          //Do nothing?
+        }else if(p[start].match(/\S/)) {
+          console.log('err 3')
+          error = true;
+          for(var i = 0; i < currentString.length; i++) {
+            if(!currentString[i].match(/\s/)) {
+              outputLex(`ERROR LEXER - Unexpected Character [ ${currentString[i]} ] at (${row}:${col+i}) via 156`);
+              row += currentString.split(/\n/).length - 1;
+              break;
             }
           }
+        }
       }
 
       start++; //Start looking for new keyphrase

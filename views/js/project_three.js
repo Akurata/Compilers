@@ -16,8 +16,9 @@ function depthFirstSearch(node) {
       //stems.push(sNode); //Enqueue stem
       hit = sNode;
     }else if(node.type === "leaf") {
+      console.log(node)
       var lNode = new leaf(node.text.name, node.token, node.token.key); //Create leaf node
-      if(lNode.name === "\"" || lNode.name === "\s" || lNode.key === "CHAR") { //Combine chars into strings
+      if(lNode.name === "\"" || lNode.key === "CHAR") { //Combine chars into strings
         charArray.push(lNode);
       }else {
         list.push(lNode); //Way to track the returned values from the DFS
@@ -25,6 +26,7 @@ function depthFirstSearch(node) {
       }
     }
   }
+  console.log(charArray)
   if(node.children) {
     node.children.forEach((child) => {
       depthFirstSearch(child);
@@ -147,6 +149,7 @@ function saBlock(node) {
 
 
 function saPrintStatement(node) {
+  console.log(list)
   var printStmtNode = node;
   printStmtNode.children = [];
   start++; //Increment past print token
