@@ -236,6 +236,44 @@ function outputSA(info) {
   document.querySelector('#output_sa_errors').innerHTML += `\n${info}`;
 }
 
+function outputCodeLog(info) {
+  document.querySelector('#output_code_log').innerHTML += `\n${info}`;
+}
+
+function outputCodeGen(info) {
+  document.querySelector('#output_code').innerHTML += ` ${info}`;
+}
+
+function copyCode() {
+  var copyText = document.getElementById('output_code');
+  copyText.select();
+  copyText.setSelectionRange(0, 99999); /*For mobile devices*/
+  document.execCommand("copy");
+  notification("Copied!", "top", "right", "success");
+}
+
+/**
+ * JQuery NotifyJS handler.
+ * @function
+ * @param { String } msg Text to be displayed on notification.
+ * @param { String } from Direction for notification window to come from. One of: {top, bottom, left, right}.
+ * @param { String } align Where to position notification window One of: {left, right, center}.
+ * @param { String } type General bootstrap standard style tag for displaying modal, and determining its icon One of: {success, danger, info, primary}.
+ * @see https://notifyjs.jpillora.com/
+*/
+function notification(msg, from, align, type) {
+  $.notify({
+      message: msg
+  },{
+      type: type,
+      timer: 4000,
+      placement: {
+          from: from,
+          align: align
+      }
+  });
+}
+
 document.addEventListener('DOMContentLoaded', () => {
   document.querySelector('#input').value = `/*
 Demonstrates compiler's ability to generate code that properly handles variable addition
@@ -264,6 +302,11 @@ function resetAll() {
   document.querySelector('#output_parse').innerHTML = "";
   document.querySelector('#output_cst').innerHTML = "";
   document.querySelector('#output_sa_errors').innerHTML = "";
+  document.querySelector('#output_code_log').innerHTML = "";
+  document.querySelector('#output_code').innerHTML = "";
+  var jump = new JumpTable();
+  var static = new StaticTable();
+  var scope = new ScopeTable();
   var saWrap = document.querySelector('#output_symbol_table');
   while(saWrap.hasChildNodes()) {
     saWrap.removeChild(saWrap.firstChild);

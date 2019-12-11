@@ -16,7 +16,6 @@ function depthFirstSearch(node) {
       //stems.push(sNode); //Enqueue stem
       hit = sNode;
     }else if(node.type === "leaf") {
-      console.log(node)
       var lNode = new leaf(node.text.name, node.token, node.token.key); //Create leaf node
       if(lNode.name === "\"" || lNode.key === "CHAR") { //Combine chars into strings
         charArray.push(lNode);
@@ -26,7 +25,6 @@ function depthFirstSearch(node) {
       }
     }
   }
-  console.log(charArray)
   if(node.children) {
     node.children.forEach((child) => {
       depthFirstSearch(child);
@@ -105,7 +103,7 @@ var blocks = [];
 var currentBlock = -1;
 
 function semanticAnalysis(cst, id) {
-  cstTree
+  //cstTree
 
   depthFirstSearch(cst);
 
@@ -137,6 +135,9 @@ function semanticAnalysis(cst, id) {
 
   //Scope Check
   scopeCheck(id);
+
+  //Code Gen time
+  codeGen(ast);
 }
 
 
@@ -149,7 +150,6 @@ function saBlock(node) {
 
 
 function saPrintStatement(node) {
-  console.log(list)
   var printStmtNode = node;
   printStmtNode.children = [];
   start++; //Increment past print token

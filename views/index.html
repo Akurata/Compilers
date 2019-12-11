@@ -45,7 +45,7 @@
               <div class="title-box-2">
                 <h5 class="title-left">
                   Input
-                  <button class="compile_btn" onclick="lex(document.querySelector('#input').value)">Do The Thing</button>
+                  <button class="compile_bt btn btn-primary float-right" onclick="lex(document.querySelector('#input').value)">Do The Thing</button>
                 </h5>
 
               </div>
@@ -110,7 +110,7 @@
           <div class="box-shadow-full">
             <div class="pt-4 pt-md-0">
               <div class="title-box-2">
-                <h5 class="title-right">
+                <h5 class="title-left">
                   AST
                 </h5>
               </div>
@@ -126,7 +126,7 @@
               <div class="box-shadow-full sa">
                 <div class="pt-4 pt-md-0">
                   <div class="title-box-2">
-                    <h5 class="title-right">
+                    <h5 class="title-left">
                       Symbol Table
                     </h5>
                   </div>
@@ -154,7 +154,7 @@
               <div class="box-shadow-full sa">
                 <div class="pt-4 pt-md-0">
                   <div class="title-box-2">
-                    <h5 class="title-right">
+                    <h5 class="title-left">
                       Semantic Analysis Errors
                     </h5>
                   </div>
@@ -167,6 +167,42 @@
           </div>
 
         </div>
+      </div>
+
+
+      <div class="row">
+
+        <div class="col-lg-4">
+          <div class="box-shadow-full">
+            <div class="pt-4 pt-md-0">
+              <div class="title-box-2">
+                <h5 class="title-right">
+                  Code Gen Log
+                </h5>
+              </div>
+              <div class="form-group">
+                <textarea class="form-control" id="output_code_log" wrap="off" readonly></textarea>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="col-lg-8">
+          <div class="box-shadow-full">
+            <div class="pt-4 pt-md-0">
+              <div class="title-box-2">
+                <h5 class="title-right">
+                  Output Code
+                </h5>
+              </div>
+              <div class="form-group">
+                <textarea class="form-control" id="output_code" wrap="off" readonly></textarea>
+                <button class="form-control btn btn-primary" onclick="copyCode()">Copy</button>
+              </div>
+            </div>
+          </div>
+        </div>
+
       </div>
 
     </div>
@@ -189,7 +225,10 @@
   <script src="js/treant-js-master/vendor/raphael.js"></script>
   <script src="js/treant-js-master/Treant.js"></script>
 
-  <!--Tree Library-->
+  <!-- Notify Library -->
+  <script src="js/bootstrap-notify.js"></script>
+
+  <!-- Tree Library -->
   <script src="js/vis-network.min.js"></script>
 
   <!-- Compiler Library -->

@@ -1315,7 +1315,7 @@ footer .credits a {
   border: 1px solid lightgray;
 }
 
-#output_cst, #output_ast {
+#output_cst, #output_ast, #output_code, #output_code_log {
   height: 55vh;
   border: 1px solid lightgray;
 }
