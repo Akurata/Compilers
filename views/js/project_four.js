@@ -346,6 +346,12 @@ function generateAssignStmt(varName, list) {
     }else if(value.key === "DIGIT") {
       code.addCode('A9');
       code.addCode(value.name);
+    }else if(value.name === "true") {
+      code.addCode('A9');
+      code.addCode('01');
+    }else if(value.name === "false") {
+      code.addCode('A9');
+      code.addCode('00');
     }
 
     //Store the accumulator in memory
@@ -453,7 +459,7 @@ function generatePrint(value) {
       code.addCode('01');
     }
   }else {
-    if(buffer.find((a) => {return a.key == 'SYMBOL'}) !== null) { //Addition input
+    if(buffer.find((a) => {return a.key == 'SYMBOL'}) != null) { //Addition input
 
       var result = generateAddition(null, buffer);
       console.log(result)
@@ -467,6 +473,15 @@ function generatePrint(value) {
       code.addCode('A2');
       code.addCode('01');
 
+    }else if(buffer.find((a) => {return a.name == 'true' || a.name == 'false'})) {
+      console.log('bool expr');
+
+      generateBoolExpr(value, true);
+
+      //var result = generateBoolExpr(value);
+      //console.log(result)
+      code.addCode('A2');
+      code.addCode('01');
     }
   }
 
@@ -474,7 +489,7 @@ function generatePrint(value) {
 }
 
 
-function generateBoolExpr(input) {
+function generateBoolExpr(input, wrap) {
   var boolGroup = [];
   var needsOperation = [];
   var comparatorIndex = 0;
@@ -490,7 +505,7 @@ function generateBoolExpr(input) {
       boolGroup.push(input[i]);
       if(input[i].key === 'SYMBOL') {
         needsOperation.push(i);
-      }else if(input[i].key === 'KEYWORDS') {
+      }else if(input[i].name === '==' || input[i].name === '!=') {
         comparatorIndex = i;
       }
     }
@@ -521,20 +536,30 @@ function generateBoolExpr(input) {
     }else {
       sideA = codeScope.currentScope.static.add(null, sideA[0].key);
       code.addCode('A9');
-      code.addCode(sideA.varName);
+      if(sideA.varName == 'true') {
+        code.addCode('01');
+      }else if(sideA.varName == 'false') {
+        code.addCode('02');
+      }else {
+        code.addCode(sideA.varName);
+      }
       code.addCode('8D');
       code.addCode(sideA.tempAddress);
       code.addCode('00', 'Address');
     }
 
-    console.log(sideB)
     if(sideB[0].key == 'ID') {
       sideB = codeScope.currentScope.static.findVar(sideB[0].name, codeScope.currentScope);
     }else {
       sideB = codeScope.currentScope.static.add(sideB[0].name, sideB[0].key);
-      console.log(sideB)
       code.addCode('A9');
-      code.addCode(sideB.varName);
+      if(sideB.varName == 'true') {
+        code.addCode('01');
+      }else if(sideB.varName == 'false') {
+        code.addCode('02');
+      }else {
+        code.addCode(sideB.varName);
+      }
       code.addCode('8D');
       code.addCode(sideB.tempAddress);
       code.addCode('00', 'Address');
@@ -576,6 +601,26 @@ function generateBoolExpr(input) {
 
   }else { //Must be '=='
     console.log('equals')
+
+    if(wrap) {
+      code.addCode('A9');
+      code.addCode('00');
+
+      code.addCode('D0');
+      code.addCode('02');
+
+      code.addCode('A9');
+      code.addCode('01');
+
+      code.addCode('8D');
+      code.addCode('00');
+      code.addCode('00');
+
+      code.addCode('AC');
+      code.addCode('00');
+      code.addCode('00');
+    }
+
   }
 
   return {a: sideA, b: sideB, op: needsOperation, comparator: comparatorIndex};
@@ -686,7 +731,7 @@ function replaceTempAddr() {
 
   //Replace Jump Table entries
   Object.keys(jump.contents).forEach((entry) => {
-    var jmpAddr = (jump.contents[entry].end - jump.contents[entry].start - 2).toString(16);
+    var jmpAddr = (jump.contents[entry].end - jump.contents[entry].start - 2).toString(16).toUpperCase();
     jmpAddr = (jump.contents[entry].distance ? jump.contents[entry].distance.toString(16).toUpperCase() : (jmpAddr.length < 2 ? `0${jmpAddr}` : jmpAddr).toUpperCase());
     code.replace(entry, jmpAddr);
     document.querySelector('#output_code').innerHTML = document.querySelector('#output_code').innerHTML.replace(new RegExp(entry, 'g'), jmpAddr);
@@ -698,8 +743,8 @@ function replaceTempAddr() {
 
       var newAddr;
 
-      newAddr = (heap).toString(16);
-      console.log(heap, newAddr)
+      newAddr = (heap).toString(16).toUpperCase();
+      console.log(heap, newAddr.toString(16).toUpperCase())
       newAddr = (newAddr.length < 2 ? `0${newAddr}` : newAddr);
 
 
@@ -713,8 +758,6 @@ function replaceTempAddr() {
         heap++;
         code.addCode('00');
       }
-
-
 
       code.replace(item.tempAddress, newAddr);
       document.querySelector('#output_code').innerHTML = document.querySelector('#output_code').innerHTML.replace(new RegExp(item.tempAddress, 'g'), newAddr);
