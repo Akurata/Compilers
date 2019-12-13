@@ -275,17 +275,15 @@ function notification(msg, from, align, type) {
 }
 
 document.addEventListener('DOMContentLoaded', () => {
-  document.querySelector('#input').value = `/* Boolean Expr Printing: This test case
-- demonstrates the compiler's ability to
-- generate code for computing the result
-- of a BooeleanExpr and printing the result
-- Result: falsefalsetruetruetruetruefalsefalsefalsetrue
-- Credit: Tien */
+  document.querySelector('#input').value = `
 {
-boolean a
-a = false
-print((a == true))
-print((false== a))
+	if (true == true) {
+		print("stringcheck")
+	}
+	print(" ")
+	if (true != false) {
+		print("noequal")
+	}
 }$`
 });
 /*

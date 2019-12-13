@@ -531,14 +531,17 @@ function generateBoolExpr(input, wrap) {
       sideB = codeScope.currentScope.static.findVar(sideB[0], codeScope.currentScope);
     }
   }else {
+    var boolA = sideA[0].name;
+    var boolB = sideB[0].name;
+
     if(sideA[0].key == 'ID') {
       sideA = codeScope.currentScope.static.findVar(sideA[0].name, codeScope.currentScope);
     }else {
       sideA = codeScope.currentScope.static.add(null, sideA[0].key);
       code.addCode('A9');
-      if(sideA.varName == 'true') {
+      if(boolA == 'true') {
         code.addCode('01');
-      }else if(sideA.varName == 'false') {
+      }else if(boolA == 'false') {
         code.addCode('02');
       }else {
         code.addCode(sideA.varName);
@@ -553,9 +556,9 @@ function generateBoolExpr(input, wrap) {
     }else {
       sideB = codeScope.currentScope.static.add(sideB[0].name, sideB[0].key);
       code.addCode('A9');
-      if(sideB.varName == 'true') {
+      if(boolB == 'true') {
         code.addCode('01');
-      }else if(sideB.varName == 'false') {
+      }else if(boolB == 'false') {
         code.addCode('02');
       }else {
         code.addCode(sideB.varName);
