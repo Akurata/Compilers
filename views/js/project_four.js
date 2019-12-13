@@ -86,12 +86,13 @@ class JumpTable {
     this.jumpCounter = 0;
   }
 
-  set(tempAddress, start, end, ref) {
+  set(tempAddress, start, end, ref, distance) {
     var addr = (tempAddress) ? tempAddress : `J${this.jumpCounter++}`;
     this.contents[addr] = (this.contents[addr] ? this.contents[addr] : {});
     this.contents[addr].start = (start) ? start : this.contents[addr].start;
     this.contents[addr].end = (end) ? end : (this.contents[addr].end ? this.contents[addr].end : null);
     this.contents[addr].ref = ref;
+    this.contents[addr].distance = distance;
     return addr;
   }
 
@@ -365,7 +366,7 @@ function generateAssignStmt(varName, list) {
 
 }
 
-
+var openWhile;
 function generateWhileStmt(input) {
   console.log('Gen While');
   outputCodeLog('Generate While');
@@ -416,6 +417,7 @@ function generateWhileStmt(input) {
   }
 
   //Load x register with side A
+  openWhile = code.value().length;
   code.addCode('AE');
   code.addCode(sideA.tempAddress, 'Temporary address A');
   code.addCode('00', 'Address');
@@ -426,9 +428,10 @@ function generateWhileStmt(input) {
   code.addCode('00', 'Address');
 
 
-  var whileJump = jump.set(null, code.value().length, null, 'WHILE');
+  var whileJump = jump.set(null, code.value().length-2, null, 'WHILE');
   code.addCode('D0');
   code.addCode(`J${whileJump.replace(/[A-Z]/g, '')}`)
+  console.log(Object.assign({}, input))
 
 
   //If z flag is 0, branch out of while
@@ -439,10 +442,12 @@ function generateWhileStmt(input) {
 
 function generateEndWhileStmt() {
   jump.resolve('WHILE');
+  //console.log(Math.abs((code.value().length - 255) - openWhile).toString(16))
 
-  var backJump = jump.set(null, code.value, null, 'WHILE_LOOP')
+  var endVal = (254 - code.value().length) + openWhile;
+  var backJump = jump.set(null, code.value().length, null, 'WHILE_LOOP', endVal);
   code.addCode('D0');
-  code.addCode(`J${backJump.replace(/[A-Z]/g, '')}`)
+  code.addCode(`J${backJump.replace(/[A-Z]/g, '')}`);
 }
 
 
@@ -649,7 +654,7 @@ function replaceTempAddr() {
   //Replace Jump Table entries
   Object.keys(jump.contents).forEach((entry) => {
     var jmpAddr = (jump.contents[entry].end - jump.contents[entry].start - 2).toString(16);
-    jmpAddr = (jmpAddr.length < 2 ? `0${jmpAddr}` : jmpAddr).toUpperCase();
+    jmpAddr = (jump.contents[entry].distance ? jump.contents[entry].distance.toString(16).toUpperCase() : (jmpAddr.length < 2 ? `0${jmpAddr}` : jmpAddr).toUpperCase());
     code.replace(entry, jmpAddr);
     document.querySelector('#output_code').innerHTML = document.querySelector('#output_code').innerHTML.replace(new RegExp(entry, 'g'), jmpAddr);
   });

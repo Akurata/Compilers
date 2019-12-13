@@ -275,17 +275,14 @@ function notification(msg, from, align, type) {
 }
 
 document.addEventListener('DOMContentLoaded', () => {
-  document.querySelector('#input').value = `/* This statement shows that addition
-- checking and printing are both valid
-- options that can be performed. Credit: Tien
-- Result: 666addition checkfalse*/
+  document.querySelector('#input').value = `/* Test case for WhileStatement. Prints 23458 */
 {
-int a
-a = 1
-if(a == 2) {
-print(a)
-}
-print("end")
+    int a
+    a = 1
+    while (a != 5) {
+            a = 1 + a
+            print(a)
+        }
 } $`
 });
 /*
