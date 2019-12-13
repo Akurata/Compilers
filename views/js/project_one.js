@@ -275,27 +275,39 @@ function notification(msg, from, align, type) {
 }
 
 document.addEventListener('DOMContentLoaded', () => {
-  document.querySelector('#input').value = `/*
-Demonstrates compiler's ability to generate code that properly handles variable addition
-Credit: Tien
-*/
+  document.querySelector('#input').value = `/* This statement shows that addition
+- checking and printing are both valid
+- options that can be performed. Credit: Tien
+- Result: 666addition checkfalse*/
 {
 int a
 a = 1
-int b
-b = 1
-b = 1 + a
-while (2 + a != 3 + b) {
-a = 1 + a
-print("int a is ")
+if(a == 2) {
 print(a)
-print(" ")
 }
-print("int b is ")
-print(b)
-}$`//"{stringaa=\"hello\"print(a)}$";
+print("end")
+} $`
 });
+/*
+  `/* This statement shows that addition
+- checking and printing are both valid
+- options that can be performed. Credit: Tien
+- Result: 666addition checkfalse
+{
+int a
+if (1+1+1+1+1 == 2+3) {
+print("addition check")
+}
+while (a != 3) {
+print(1 + 2 + 3)
+a = 1 + a
+}
+if (1+5+3 != 8) {
+print(false)
+}
+} $`//"{stringaa=\"hello\"print(a)}$";
 
+**/
 
 function resetAll() {
   document.querySelector('#output_lex').innerHTML = "";

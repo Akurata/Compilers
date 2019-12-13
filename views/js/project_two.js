@@ -67,6 +67,7 @@ function parse(programTokens, p) {
     },
     nodeStructure: cst
   });
+  console.log(cst);
   semanticAnalysis(cst, p);
 }
 

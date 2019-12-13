@@ -110,7 +110,7 @@ function semanticAnalysis(cst, id) {
   list.forEach((node) => {
     switch(node.text.name) {
       case "Block": saBlock(node); break;
-      case "EndBlock": setToParent(); break;
+      case "EndBlock": setToParent(); start++; break;
       case "PrintStmt": saPrintStatement(node); break;
       case "EndPrintStmt": setToParent(); break;
       case "AssignStmt": saAssignmentStatement(node); break;
@@ -118,7 +118,7 @@ function semanticAnalysis(cst, id) {
       case "VarDecl": saVarDecl(node); break;
       case "EndVarDecl": setToParent(); break;
       case "WhileStmt": saWhileStatement(node); break;
-      case "EndWhileStmt": setToParent(); break;
+      case "EndWhileStmt": setToParent(); start++; break;
       case "IfStmt": saIfStatement(node); break;
       case "EndIfStmt": setToParent(); break;
       default: break;
@@ -137,6 +137,7 @@ function semanticAnalysis(cst, id) {
   scopeCheck(id);
 
   //Code Gen time
+  console.log(ast);
   codeGen(ast);
 }
 
@@ -153,13 +154,13 @@ function saPrintStatement(node) {
   var printStmtNode = node;
   printStmtNode.children = [];
   start++; //Increment past print token
-  if(list[start].key === "DIGIT" || list[start].key === "ID") {
+  if(list[start].key === "DIGIT") {
     var printLink = operationExpr("EndPrintStmt");
     printStmtNode.appendChild(printLink);
-  }else if(list[start].key === "STRING" || list[start].key === "KEYWORDS") {
+  }else if(list[start].key === "STRING" || list[start].key === "KEYWORDS" || list[start].key === "ID") {
     printStmtNode.appendChild(list[start]);
-    start++;
   }
+  start++;
   start++;
   current.appendChild(printStmtNode);
   current = printStmtNode;
