@@ -275,15 +275,24 @@ function notification(msg, from, align, type) {
 }
 
 document.addEventListener('DOMContentLoaded', () => {
-  document.querySelector('#input').value = `/* Test case for WhileStatement. Prints 23458 */
+  document.querySelector('#input').value = `/*
+Demonstrates compiler's ability to generate code that properly handles variable addition
+Credit: Tien
+*/
 {
-    int a
-    a = 1
-    while (a != 5) {
-            a = 1 + a
-            print(a)
-        }
-} $`
+int a
+a = 1
+int b
+b = 4
+while (1 + a != 1 + b) {
+a = 1 + a
+print("int a is ")
+print(a)
+print(" ")
+}
+print("int b is ")
+print(b)
+}$`
 });
 /*
   `/* This statement shows that addition

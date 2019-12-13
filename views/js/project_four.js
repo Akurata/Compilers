@@ -98,7 +98,7 @@ class JumpTable {
 
   resolve(ref) {
     Object.keys(this.contents).forEach((jump) => {
-      if(!this.contents[jump].end && this.contents[jump].ref == ref) {
+      if(this.contents[jump].ref == ref) {
         this.contents[jump].end = code.value().length;
       }
     })
@@ -357,17 +357,8 @@ function generateAssignStmt(varName, list) {
     while(!list[0].name.match(/^End./)) { //Gather all operation parts in order
       buffer.push(list.shift());
     }
-    //generateOperation(varName.name, buffer);
-    var result = generateAddition(varName.name, buffer);
-    console.log(result)
-    //code.addCode('AD');
-    //code.addCode(result.tempAddress, 'Load temporary address from addition');
-    //code.addCode('00', 'Address');
 
-    //Save to permenant memory address
-    //code.addCode('8D');
-    //code.addCode(codeScope.currentScope.static.findVar(varName.name, codeScope.currentScope).tempAddress);
-    //code.addCode('00', 'Address');
+    var result = generateAddition(varName.name, buffer);
   }
 
 }
@@ -381,27 +372,32 @@ function generateWhileStmt(input) {
 
   var boolRes = generateBoolExpr(input);
 
-
-  var whileJump = jump.set(null, code.value().length-2, null, 'WHILE');
+  var whileJump = jump.set(null, code.value().length, null, 'WHILE');//-2
   code.addCode('D0');
   code.addCode(`J${whileJump.replace(/[A-Z]/g, '')}`)
-  //console.log(Object.assign({}, input))
 
-
-  //If z flag is 0, branch out of while
-  //If z flag is 1, continue until end of block, then branch back
 
 }
 
 
 function generateEndWhileStmt() {
-  jump.resolve('WHILE');
-  //console.log(Math.abs((code.value().length - 255) - openWhile).toString(16))
 
-  var endVal = (256 - code.value().length+3) + openWhile;
-  var backJump = jump.set(null, code.value().length, null, 'WHILE_LOOP', endVal);
+  code.addCode('A2');
+  code.addCode('01');
+
+  code.addCode('EC');
+  code.addCode('00');
+  code.addCode('00');
+
   code.addCode('D0');
+
+
+  var endVal = (255 - code.value().length) + openWhile;
+  var backJump = jump.set(null, code.value().length, openWhile, 'WHILE_LOOP', endVal);
+
   code.addCode(`J${backJump.replace(/[A-Z]/g, '')}`);
+
+  jump.resolve('WHILE');
 }
 
 
@@ -409,32 +405,69 @@ function generatePrint(value) {
   console.log('Gen Print');
   outputCodeLog('Generate Print');
 
-  //if string
-  if(value[0].key == 'STRING') {
-    value = value.shift();
-    //store string in memory
-    var input = codeScope.currentScope.static.add(null, value.key);
-    codeScope.currentScope.static.update(input.tempAddress, value.name.replace(/\"/g, ''), codeScope.currentScope);
+  var buffer = [];
+  for(var i = 0; i < value.length; i++) {
+    if(value[i].name == 'EndPrintStmt') {
+      break;
+    }else {
+      buffer.push(value[i]);
+    }
+  }
+  console.log(buffer)
 
-    //Load string address
-    code.addCode('A0');
-    code.addCode(input.tempAddress);
+  if(buffer.length == 1) {
+    //if string
+    if(value[0].key == 'STRING') { //String input
+      value = value.shift();
+      //store string in memory
+      var input = codeScope.currentScope.static.add(null, value.key);
+      input = codeScope.currentScope.static.update(input.tempAddress, value.name.replace(/\"/g, ''), codeScope.currentScope);
 
-    //Call Print
-    code.addCode('A2');
-    code.addCode('02');
+      //Load string address
+      code.addCode('A0');
+      code.addCode(input.tempAddress);
 
-  }else { //must be var
-    //var input = codeScope.currentScope.static.add(null, value.key);
+      //Call Print
+      code.addCode('A2');
+      code.addCode('02');
 
-    //load y register with var memory address
-    code.addCode('AC');
-    code.addCode(codeScope.currentScope.static.findVar(value[0].name, codeScope.currentScope).tempAddress);
-    code.addCode('00', 'Address');
+    }else if(value[0].name == 'true' || value[0].name == 'false') { //Boolean input
 
-    //Call Print
-    code.addCode('A2');
-    code.addCode('01');
+      //Load string address
+      code.addCode('A0');
+      code.addCode((value[0].name == 'true') ? '01' : '00');
+
+      //Call Print
+      code.addCode('A2');
+      code.addCode('01');
+
+    }else { //must be var
+
+      //load y register with var memory address
+      code.addCode('AC');
+      code.addCode(codeScope.currentScope.static.findVar(value[0].name, codeScope.currentScope).tempAddress);
+      code.addCode('00', 'Address');
+
+      //Call Print
+      code.addCode('A2');
+      code.addCode('01');
+    }
+  }else {
+    if(buffer.find((a) => {return a.key == 'SYMBOL'}) !== null) { //Addition input
+
+      var result = generateAddition(null, buffer);
+      console.log(result)
+
+      //load y register with var memory address
+      code.addCode('AC');
+      code.addCode(result.tempAddress);
+      code.addCode('00', 'Address');
+
+      //Call Print
+      code.addCode('A2');
+      code.addCode('01');
+
+    }
   }
 
   code.addCode('FF', 'Print String');
@@ -467,7 +500,7 @@ function generateBoolExpr(input) {
 
   var sideA = boolGroup.slice(0, comparatorIndex-1);
   var sideB = boolGroup.slice(comparatorIndex);
-  console.log(sideA, sideB)
+  console.log(sideA, sideB, needsOperation)
 
   //Generate addition functions if needed
   if(needsOperation.length > 0) {
@@ -541,26 +574,6 @@ function generateBoolExpr(input) {
     code.addCode('00');
     code.addCode('00');
 
-    code.addCode('A9');
-    code.addCode('01');
-
-    code.addCode('D0');
-    code.addCode('02');
-
-    code.addCode('A9');
-    code.addCode('00');
-
-    code.addCode('A2');
-    code.addCode('00');
-
-    code.addCode('8D');
-    code.addCode('00');
-    code.addCode('00');
-
-    code.addCode('EC');
-    code.addCode('00');
-    code.addCode('00');
-
   }else { //Must be '=='
     console.log('equals')
   }
@@ -578,8 +591,6 @@ function generateIfStmt(input) {
   var ifJump = jump.set(null, code.value().length, null, 'IF');
   code.addCode('D0');
   code.addCode(`J${ifJump.replace(/[A-Z]/g, '')}`)
-
-  //console.log(Object.assign([], sideA), Object.assign([], sideB));
 }
 
 
@@ -589,16 +600,7 @@ function generateAddition(tag, expr) {
   outputCodeLog('Generate Addition');
 
   //Create placeholder memory value
-  var input;
-  //if(tag) {
-  //  input = codeScope.currentScope.static.findVar(tag, codeScope.currentScope);
-  //}else {
-    input = codeScope.currentScope.static.add(null, null);
-    //var tag = input.varName;
-  //}
-
-  console.log(input, tag)
-  //var first = expr.shift();
+  var input = codeScope.currentScope.static.add(null, null);
 
   //Set first value in accumulator
   code.addCode('A9');
@@ -608,14 +610,6 @@ function generateAddition(tag, expr) {
   code.addCode('8D');
   code.addCode(input.tempAddress);
   code.addCode('00');
-
-  //Store first value to temporary address
-  //input = codeScope.currentScope.static.update(tag, parseInt(input.value) + parseInt(first.name), codeScope.currentScope);
-  //code.addCode('8D');
-  //code.addCode(input.tempAddress, 'Store first value in temp address');
-  //code.addCode('00', 'Address');
-
-
 
   for(var i = 0; i < expr.length; i++) {
     var item = expr[i];
@@ -668,9 +662,9 @@ function generateAddition(tag, expr) {
     var temp = codeScope.currentScope.static.findVar(tag, codeScope.currentScope);
 
     //Load existing ID into accumulator
-    code.addCode('AD');
-    code.addCode(input.tempAddress, `Load ID [${item.name}] value`);
-    code.addCode('00', 'Address');
+    //code.addCode('AD');
+    //code.addCode(input.tempAddress, `Load ID [${item.name}] value`);
+    //code.addCode('00', 'Address');
 
     //Store new total value to variable address
     code.addCode('8D');
@@ -678,12 +672,7 @@ function generateAddition(tag, expr) {
     code.addCode('00', 'Address');
   }
 
-  code.addCode('A2');
-  code.addCode('01');
 
-  code.addCode('EC');
-  code.addCode('00');
-  code.addCode('00');
 
   return input;
 }
@@ -708,21 +697,24 @@ function replaceTempAddr() {
     scope.static.contents.forEach((item, i) => {
 
       var newAddr;
+
+      newAddr = (heap).toString(16);
+      console.log(heap, newAddr)
+      newAddr = (newAddr.length < 2 ? `0${newAddr}` : newAddr);
+
+
       if(typeof item.value == 'object') {
-        var sto = heap;
-        console.log(sto.toString(16))
         item.value.forEach((char) => {
           code.addCode((char == '00') ? '00' : char.charCodeAt(0).toString(16).toUpperCase(), null, true);
           console.log(heap.toString(16), char.charCodeAt(0).toString(16).toUpperCase());
-          //heap++;
+          heap++;
         });
-        console.log(sto, heap)
       }else {
+        heap++;
         code.addCode('00');
       }
 
-      newAddr = (heap++).toString(16);
-      newAddr = (newAddr.length < 2 ? `0${newAddr}` : newAddr).toUpperCase();
+
 
       code.replace(item.tempAddress, newAddr);
       document.querySelector('#output_code').innerHTML = document.querySelector('#output_code').innerHTML.replace(new RegExp(item.tempAddress, 'g'), newAddr);
@@ -732,11 +724,7 @@ function replaceTempAddr() {
     });
   });
 
-
-
-
-  console.log(code.value().length);
-  while(code.value().length < 255) {
+  while(code.value().length + heap < 255) {
     code.addCode('00', 'Empty Space', true);
   }
 }
