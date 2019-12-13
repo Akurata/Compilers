@@ -86,24 +86,21 @@ class JumpTable {
     this.jumpCounter = 0;
   }
 
-  set(tempAddress, start, end) {
+  set(tempAddress, start, end, ref) {
     var addr = (tempAddress) ? tempAddress : `J${this.jumpCounter++}`;
     this.contents[addr] = (this.contents[addr] ? this.contents[addr] : {});
     this.contents[addr].start = (start) ? start : this.contents[addr].start;
     this.contents[addr].end = (end) ? end : (this.contents[addr].end ? this.contents[addr].end : null);
+    this.contents[addr].ref = ref;
     return addr;
   }
 
-  resolve() {
+  resolve(ref) {
     Object.keys(this.contents).forEach((jump) => {
-      if(!this.contents[jump].end) {
+      if(!this.contents[jump].end && this.contents[jump].ref == ref) {
         this.contents[jump].end = code.value().length;
       }
     })
-  }
-
-  getDistance(address) {
-    return this.contents[address];
   }
 }
 
@@ -276,11 +273,11 @@ function codeGen(ast) {
       case 'EndBlock': generateEndBlock(); break;
       case 'VarDecl': generateVarDecl(input.shift(), input.shift()); break;
       case 'AssignStmt': generateAssignStmt(input.shift(), input); break;
-      case 'WhileStmt': break;
-      case 'BooleanExpr': break;
+      case 'WhileStmt': generateWhileStmt(input); break;
+      case 'EndWhileStmt': generateEndWhileStmt(); break;
       case 'PrintStmt': generatePrint(input); break;
       case 'IfStmt': generateIfStmt(input); break;
-      case 'EndIfStmt': jump.resolve(); break;
+      case 'EndIfStmt': jump.resolve('IF'); break;
       default: break;
     }
   }
@@ -369,6 +366,86 @@ function generateAssignStmt(varName, list) {
 }
 
 
+function generateWhileStmt(input) {
+  console.log('Gen While');
+  outputCodeLog('Generate While');
+
+  var boolRes = generateBoolExpr(input);
+  var sideA = boolRes.a;
+  var sideB = boolRes.b;
+  var needsOperation = boolRes.op;
+  var comparatorIndex = boolRes.comparator;
+
+  //Generate addition functions if needed
+  if(needsOperation.length > 0) {
+    if(needsOperation.find((a) => {return a < comparatorIndex}) || sideA[0].key === 'DIGIT') {
+      sideA = generateAddition(null, sideA);
+    }else {
+      sideA = codeScope.currentScope.static.findVar(sideA[0], codeScope.currentScope);
+    }
+
+    if(needsOperation.find((a) => {return a > comparatorIndex}) || sideB[0].key === 'DIGIT') {
+      sideB = generateAddition(null, sideB);
+    }else {
+      sideB = codeScope.currentScope.static.findVar(sideB[0], codeScope.currentScope);
+    }
+  }else {
+    if(sideA[0].key == 'ID') {
+      sideA = codeScope.currentScope.static.findVar(sideA[0].name, codeScope.currentScope);
+    }else {
+      sideA = codeScope.currentScope.static.add(null, sideA[0].key);
+      code.addCode('A9');
+      code.addCode(sideA.varName);
+      code.addCode('8D');
+      code.addCode(sideA.tempAddress);
+      code.addCode('00', 'Address');
+    }
+
+    console.log(sideB)
+    if(sideB[0].key == 'ID') {
+      sideB = codeScope.currentScope.static.findVar(sideB[0].name, codeScope.currentScope);
+    }else {
+      sideB = codeScope.currentScope.static.add(sideB[0].name, sideB[0].key);
+      console.log(sideB)
+      code.addCode('A9');
+      code.addCode(sideB.varName);
+      code.addCode('8D');
+      code.addCode(sideB.tempAddress);
+      code.addCode('00', 'Address');
+    }
+  }
+
+  //Load x register with side A
+  code.addCode('AE');
+  code.addCode(sideA.tempAddress, 'Temporary address A');
+  code.addCode('00', 'Address');
+
+  //CPX to saved location of side B
+  code.addCode('EC');
+  code.addCode(sideB.tempAddress, 'Temporary address B');
+  code.addCode('00', 'Address');
+
+
+  var whileJump = jump.set(null, code.value().length, null, 'WHILE');
+  code.addCode('D0');
+  code.addCode(`J${whileJump.replace(/[A-Z]/g, '')}`)
+
+
+  //If z flag is 0, branch out of while
+  //If z flag is 1, continue until end of block, then branch back
+
+}
+
+
+function generateEndWhileStmt() {
+  jump.resolve('WHILE');
+
+  var backJump = jump.set(null, code.value, null, 'WHILE_LOOP')
+  code.addCode('D0');
+  code.addCode(`J${backJump.replace(/[A-Z]/g, '')}`)
+}
+
+
 function generatePrint(value) {
   console.log('Gen Print');
   outputCodeLog('Generate Print');
@@ -405,10 +482,7 @@ function generatePrint(value) {
 }
 
 
-function generateIfStmt(input) {
-  console.log('Gen IfStmt');
-  outputCodeLog('Generate IfStmt');
-
+function generateBoolExpr(input) {
   var boolGroup = [];
   var needsOperation = [];
   var comparatorIndex = 0;
@@ -433,6 +507,21 @@ function generateIfStmt(input) {
 
   var sideA = boolGroup.slice(0, comparatorIndex-1);
   var sideB = boolGroup.slice(comparatorIndex);
+
+  return {a: sideA, b: sideB, op: needsOperation, comparator: comparatorIndex};
+}
+
+
+function generateIfStmt(input) {
+  console.log('Gen IfStmt');
+  outputCodeLog('Generate IfStmt');
+
+  var boolRes = generateBoolExpr(input);
+  var sideA = boolRes.a;
+  var sideB = boolRes.b;
+  var needsOperation = boolRes.op;
+  var comparatorIndex = boolRes.comparator;
+
   console.log(Object.assign([], sideA), Object.assign([], sideB));
 
   //Generate addition functions if needed
@@ -483,7 +572,7 @@ function generateIfStmt(input) {
   code.addCode('00', 'Address');
 
 
-  var ifJump = jump.set(null, code.value().length);
+  var ifJump = jump.set(null, code.value().length, null, 'IF');
   code.addCode('D0');
   code.addCode(`J${ifJump.replace(/[A-Z]/g, '')}`)
 
