@@ -117,11 +117,13 @@ class StaticTable {
   }
 
   add(varName, type, value) {
+    console.log(JSON.parse(JSON.stringify(codeScope)))
     if(!varName) {
       varName = `T${tempAddrCount}`
     }
 
-    if(this.contents.find((a) => {return a.varName == varName})) {
+    var search = this.findVar(varName, codeScope.currentScope);
+    if(search) {
       console.log('existing value', varName, value)
       return this.update(varName, value, codeScope.currentScope);
     }else {
@@ -154,9 +156,13 @@ class StaticTable {
     var search = tmpScope.static.contents.find((a) => {return a.varName == varName});
     if(search) {
       return search;
-    }else {
+    }
+
+    if(tmpScope.parentLevel != null) {
       var tmp = codeScope.children.find((a) => {return a.level == tmpScope.parentLevel});
       return this.findVar(varName, tmp);
+    }else {
+      return false;
     }
   }
 
@@ -354,14 +360,14 @@ function generateAssignStmt(varName, list) {
     //generateOperation(varName.name, buffer);
     var result = generateAddition(varName.name, buffer);
     console.log(result)
-    code.addCode('AD');
-    code.addCode(result.tempAddress, 'Load temporary address from addition');
-    code.addCode('00', 'Address');
+    //code.addCode('AD');
+    //code.addCode(result.tempAddress, 'Load temporary address from addition');
+    //code.addCode('00', 'Address');
 
     //Save to permenant memory address
-    code.addCode('8D');
-    code.addCode(codeScope.currentScope.static.findVar(varName.name, codeScope.currentScope).tempAddress);
-    code.addCode('00', 'Address');
+    //code.addCode('8D');
+    //code.addCode(codeScope.currentScope.static.findVar(varName.name, codeScope.currentScope).tempAddress);
+    //code.addCode('00', 'Address');
   }
 
 }
@@ -371,67 +377,15 @@ function generateWhileStmt(input) {
   console.log('Gen While');
   outputCodeLog('Generate While');
 
-  var boolRes = generateBoolExpr(input);
-  var sideA = boolRes.a;
-  var sideB = boolRes.b;
-  var needsOperation = boolRes.op;
-  var comparatorIndex = boolRes.comparator;
-
-  //Generate addition functions if needed
-  if(needsOperation.length > 0) {
-    if(needsOperation.find((a) => {return a < comparatorIndex}) || sideA[0].key === 'DIGIT') {
-      sideA = generateAddition(null, sideA);
-    }else {
-      sideA = codeScope.currentScope.static.findVar(sideA[0], codeScope.currentScope);
-    }
-
-    if(needsOperation.find((a) => {return a > comparatorIndex}) || sideB[0].key === 'DIGIT') {
-      sideB = generateAddition(null, sideB);
-    }else {
-      sideB = codeScope.currentScope.static.findVar(sideB[0], codeScope.currentScope);
-    }
-  }else {
-    if(sideA[0].key == 'ID') {
-      sideA = codeScope.currentScope.static.findVar(sideA[0].name, codeScope.currentScope);
-    }else {
-      sideA = codeScope.currentScope.static.add(null, sideA[0].key);
-      code.addCode('A9');
-      code.addCode(sideA.varName);
-      code.addCode('8D');
-      code.addCode(sideA.tempAddress);
-      code.addCode('00', 'Address');
-    }
-
-    console.log(sideB)
-    if(sideB[0].key == 'ID') {
-      sideB = codeScope.currentScope.static.findVar(sideB[0].name, codeScope.currentScope);
-    }else {
-      sideB = codeScope.currentScope.static.add(sideB[0].name, sideB[0].key);
-      console.log(sideB)
-      code.addCode('A9');
-      code.addCode(sideB.varName);
-      code.addCode('8D');
-      code.addCode(sideB.tempAddress);
-      code.addCode('00', 'Address');
-    }
-  }
-
-  //Load x register with side A
   openWhile = code.value().length;
-  code.addCode('AE');
-  code.addCode(sideA.tempAddress, 'Temporary address A');
-  code.addCode('00', 'Address');
 
-  //CPX to saved location of side B
-  code.addCode('EC');
-  code.addCode(sideB.tempAddress, 'Temporary address B');
-  code.addCode('00', 'Address');
+  var boolRes = generateBoolExpr(input);
 
 
   var whileJump = jump.set(null, code.value().length-2, null, 'WHILE');
   code.addCode('D0');
   code.addCode(`J${whileJump.replace(/[A-Z]/g, '')}`)
-  console.log(Object.assign({}, input))
+  //console.log(Object.assign({}, input))
 
 
   //If z flag is 0, branch out of while
@@ -444,7 +398,7 @@ function generateEndWhileStmt() {
   jump.resolve('WHILE');
   //console.log(Math.abs((code.value().length - 255) - openWhile).toString(16))
 
-  var endVal = (254 - code.value().length) + openWhile;
+  var endVal = (256 - code.value().length+3) + openWhile;
   var backJump = jump.set(null, code.value().length, null, 'WHILE_LOOP', endVal);
   code.addCode('D0');
   code.addCode(`J${backJump.replace(/[A-Z]/g, '')}`);
@@ -491,6 +445,7 @@ function generateBoolExpr(input) {
   var boolGroup = [];
   var needsOperation = [];
   var comparatorIndex = 0;
+  var comparatorWhich = null;
   var end;
 
   //Collect the boolean expression group
@@ -507,27 +462,12 @@ function generateBoolExpr(input) {
       }
     }
   }
-
+  comparatorWhich = input[comparatorIndex].name;
   input = input.slice(end);
 
   var sideA = boolGroup.slice(0, comparatorIndex-1);
   var sideB = boolGroup.slice(comparatorIndex);
-
-  return {a: sideA, b: sideB, op: needsOperation, comparator: comparatorIndex};
-}
-
-
-function generateIfStmt(input) {
-  console.log('Gen IfStmt');
-  outputCodeLog('Generate IfStmt');
-
-  var boolRes = generateBoolExpr(input);
-  var sideA = boolRes.a;
-  var sideB = boolRes.b;
-  var needsOperation = boolRes.op;
-  var comparatorIndex = boolRes.comparator;
-
-  console.log(Object.assign([], sideA), Object.assign([], sideB));
+  console.log(sideA, sideB)
 
   //Generate addition functions if needed
   if(needsOperation.length > 0) {
@@ -568,20 +508,78 @@ function generateIfStmt(input) {
     }
   }
 
+  //Load x register with side A
   code.addCode('AE');
   code.addCode(sideA.tempAddress, 'Temporary address A');
   code.addCode('00', 'Address');
 
+  //CPX to saved location of side B
   code.addCode('EC');
   code.addCode(sideB.tempAddress, 'Temporary address B');
   code.addCode('00', 'Address');
 
+  if(comparatorWhich == '!=') {
+    console.log('nequals')
+    //Jump 2
+    code.addCode('A9');
+    code.addCode('00');
+
+    code.addCode('D0');
+    code.addCode('02');
+
+    code.addCode('A9');
+    code.addCode('01');
+
+    code.addCode('A2');
+    code.addCode('00');
+
+    code.addCode('8D');
+    code.addCode('00');
+    code.addCode('00');
+
+    code.addCode('EC');
+    code.addCode('00');
+    code.addCode('00');
+
+    code.addCode('A9');
+    code.addCode('01');
+
+    code.addCode('D0');
+    code.addCode('02');
+
+    code.addCode('A9');
+    code.addCode('00');
+
+    code.addCode('A2');
+    code.addCode('00');
+
+    code.addCode('8D');
+    code.addCode('00');
+    code.addCode('00');
+
+    code.addCode('EC');
+    code.addCode('00');
+    code.addCode('00');
+
+  }else { //Must be '=='
+    console.log('equals')
+  }
+
+  return {a: sideA, b: sideB, op: needsOperation, comparator: comparatorIndex};
+}
+
+
+function generateIfStmt(input) {
+  console.log('Gen IfStmt');
+  outputCodeLog('Generate IfStmt');
+
+  var boolRes = generateBoolExpr(input);
 
   var ifJump = jump.set(null, code.value().length, null, 'IF');
   code.addCode('D0');
   code.addCode(`J${ifJump.replace(/[A-Z]/g, '')}`)
 
-  console.log(Object.assign([], sideA), Object.assign([], sideB));
+  //console.log(Object.assign([], sideA), Object.assign([], sideB));
 }
 
 
@@ -591,56 +589,102 @@ function generateAddition(tag, expr) {
   outputCodeLog('Generate Addition');
 
   //Create placeholder memory value
-  var input = codeScope.currentScope.static.add((tag) ? tag : null, 'INT');
-  tag = input.varName;
-  var first = expr.shift();
+  var input;
+  //if(tag) {
+  //  input = codeScope.currentScope.static.findVar(tag, codeScope.currentScope);
+  //}else {
+    input = codeScope.currentScope.static.add(null, null);
+    //var tag = input.varName;
+  //}
+
+  console.log(input, tag)
+  //var first = expr.shift();
 
   //Set first value in accumulator
   code.addCode('A9');
-  code.addCode(first.name, 'Set first value');
+  code.addCode('00', 'Set clear accumulator');
+
+  //Reset temp address
+  code.addCode('8D');
+  code.addCode(input.tempAddress);
+  code.addCode('00');
 
   //Store first value to temporary address
-  input = codeScope.currentScope.static.update(tag, parseInt(input.value) + parseInt(first.name), codeScope.currentScope);
-  code.addCode('8D');
-  code.addCode(input.tempAddress, 'Store first value in temp address');
-  code.addCode('00', 'Address');
+  //input = codeScope.currentScope.static.update(tag, parseInt(input.value) + parseInt(first.name), codeScope.currentScope);
+  //code.addCode('8D');
+  //code.addCode(input.tempAddress, 'Store first value in temp address');
+  //code.addCode('00', 'Address');
 
-  expr.forEach((item) => {
-    if(item.key === 'DIGIT') {
-      //Set next value in accumulator
-      code.addCode('A9');
-      code.addCode(item.name, 'Set next value');
 
-      //Add with carry using temp address
-      code.addCode('6D');
-      code.addCode(input.tempAddress, 'Add total value');
-      code.addCode('00', 'Address');
 
-      //Store new total value to temporary address
-      input = codeScope.currentScope.static.update(tag, parseInt(input.value) + parseInt(first.name), codeScope.currentScope);
-      code.addCode('8D');
-      code.addCode(input.tempAddress, 'Store new total value in temp address');
-      code.addCode('00', 'Address');
-    }else if(item.key === 'ID') {
-      var temp = codeScope.currentScope.static.findVar(item.name, codeScope.currentScope);
+  for(var i = 0; i < expr.length; i++) {
+    var item = expr[i];
+    console.log(item.key)
+    if(item.key !== 'SYMBOL') {
+      if(item.key === 'DIGIT') {
 
-      //Load existing ID into accumulator
-      code.addCode('AD');
-      code.addCode(temp.tempAddress, `Load ID [${item.name}] value`);
-      code.addCode('00', 'Address');
+        //Set next value in accumulator
+        code.addCode('A9');
+        code.addCode(item.name, 'Set next value');
 
-      //Add with carry using temp address
-      code.addCode('6D');
-      code.addCode(input.tempAddress, 'Add total value');
-      code.addCode('00', 'Address');
+        //Add with carry using temp address
+        code.addCode('6D');
+        code.addCode(input.tempAddress, 'Add total value');
+        code.addCode('00', 'Address');
 
-      //Store new total value to temporary address
-      input = codeScope.currentScope.static.update(tag, parseInt(input.value) + parseInt(first.name), codeScope.currentScope);
-      code.addCode('8D');
-      code.addCode(input.tempAddress, 'Store new total value in temp address');
-      code.addCode('00', 'Address');
+        //Store new total value to temporary address
+        //input = codeScope.currentScope.static.update(tag, parseInt(input.value) + parseInt(first.name), codeScope.currentScope);
+        code.addCode('8D');
+        code.addCode(input.tempAddress, 'Store new total value in temp address');
+        code.addCode('00', 'Address');
+
+      }else if(item.key === 'ID') {
+        var temp = codeScope.currentScope.static.findVar(item.name, codeScope.currentScope);
+
+        //Load existing ID into accumulator
+        code.addCode('AD');
+        code.addCode(input.tempAddress, `Load ID [${item.name}] value`);
+        code.addCode('00', 'Address');
+
+        //Add with carry using temp address
+        code.addCode('6D');
+        code.addCode(temp.tempAddress, 'Add total value');
+        code.addCode('00', 'Address');
+
+        //Store new total value to temporary address
+        //input = codeScope.currentScope.static.update(tag, parseInt(input.value) + parseInt(first.name), codeScope.currentScope);
+        code.addCode('8D');
+        code.addCode(input.tempAddress, 'Store new total value in temp address');
+        code.addCode('00', 'Address');
+
+      }
+
     }
-  });
+
+  };
+
+
+  if(tag) {
+    var temp = codeScope.currentScope.static.findVar(tag, codeScope.currentScope);
+
+    //Load existing ID into accumulator
+    code.addCode('AD');
+    code.addCode(input.tempAddress, `Load ID [${item.name}] value`);
+    code.addCode('00', 'Address');
+
+    //Store new total value to variable address
+    code.addCode('8D');
+    code.addCode(temp.tempAddress, 'Store new total value in var address');
+    code.addCode('00', 'Address');
+  }
+
+  code.addCode('A2');
+  code.addCode('01');
+
+  code.addCode('EC');
+  code.addCode('00');
+  code.addCode('00');
+
   return input;
 }
 
