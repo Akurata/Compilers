@@ -44,6 +44,10 @@ textarea.form-control {
   width: 100%;
 }
 
+.form-control {
+  overflow-y: auto;
+}
+
 .compile_btn {
   position: absolute;
   right: 0px;

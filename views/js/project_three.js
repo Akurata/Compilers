@@ -3,28 +3,32 @@ var astTree;
 //var order = []; //Leaf node container
 var list = [];
 var charArray = []; //Char array container
-var dfsoffset = 0;
+var dfs_quotes = 0;
 function depthFirstSearch(node) {
   var hold;
   var hit = null;
   if(node.type) {
     if(node.type === "stem") {
       var sNode = new stem(node.text.name, node.token, node.token.key); //Create stem node
-      //sNode.children = order; //Apend leaf nodes to stem children
-      //order = []; //Reset leaf node container
       charArray = []; //Reset char array container
       list.push(sNode); //Way to track the returned values from the DFS
-      dfsoffset++;
-      //stems.push(sNode); //Enqueue stem
       hit = sNode;
     }else if(node.type === "leaf") {
       var lNode = new leaf(node.text.name, node.token, node.token.key); //Create leaf node
       if(lNode.name === "\"" || lNode.key === "CHAR") { //Combine chars into strings
+        if(lNode.name === "\"") {
+          dfs_quotes++;
+        }
         charArray.push(lNode);
+
+        if(dfs_quotes > 0 && dfs_quotes%2 === 0) {
+          var str = charArray.map((char) => {return char.name}).join('');
+          var temp = new leaf(str.replace(/\"\"/g, '\"'), charArray, "STRING");
+          list.push(temp);
+          charArray = [];
+        }
       }else {
         list.push(lNode); //Way to track the returned values from the DFS
-        dfsoffset++;
-        //order.push(lNode);
       }
     }
   }
@@ -33,31 +37,12 @@ function depthFirstSearch(node) {
     node.children.forEach((child) => {
       depthFirstSearch(child);
     });
+
+    if(hit) {
+      list.push(new stem(`End${node.text.name}`));
+    }
   }
 
-  if(hit) {
-    if(charArray.length > 0 && node.type === "stem") { //If there is a char string
-      var str = charArray.map((char) => {return char.name}).join('');
-      var test = str.indexOf('\"\"');
-      if(test > 0) { //Join the array and create leaf node
-        var alpha = new leaf(str.substring(0, test), charArray, "STRING");
-        list.push(alpha);
-        sNode.appendChild(alpha); //Append that to children
-        var beta = new leaf(str.substring(test+1, str.length), charArray, "STRING");
-        list.push(beta);
-        sNode.appendChild(beta); //Append that to children
-      }else {
-        var temp = new leaf(str, charArray, "STRING")
-        //list.push(temp);
-        list.splice(list.length + dfsoffset-2, 0, temp)
-        console.log(dfsoffset, temp)
-        sNode.appendChild(temp); //Append that to children
-      }
-      charArray = [];
-    }
-    dfsoffset = 0;
-    list.push(new stem(`End${node.text.name}`));
-  }
 }
 
 
@@ -148,7 +133,9 @@ function semanticAnalysis(cst, id) {
   scopeCheck(id);
 
   //Code Gen time
-  codeGen(ast);
+  if(!cst_err) {
+    codeGen(ast);
+  }
 }
 
 
@@ -163,22 +150,13 @@ function saBlock(node) {
 function saPrintStatement(node) {
   var printStmtNode = node;
   printStmtNode.children = [];
-  if(list[start + 1].name !== "EndPrintStmt") {
+  if(list[start+1] && list[start+1].name !== "EndPrintStmt") {
     start++; //Increment past print token
   }
 
-  /*
-  if(list[start+1].name !== "EndPrintStmt") {
-    var printLink = operationExpr("EndPrintStmt");
-    printStmtNode.appendChild(printLink);
-  }else {//if(list[start].key === "STRING" || list[start].key === "KEYWORDS" || list[start].key === "ID") {
-    printStmtNode.appendChild(list[start]);
-  }*/
-  console.log(list[start])
   var printLink = operationExpr("EndPrintStmt");
   printStmtNode.appendChild(printLink);
-  start++;
-  start++;
+
   current.appendChild(printStmtNode);
   current = printStmtNode;
 }
@@ -187,7 +165,6 @@ function saPrintStatement(node) {
 function saAssignmentStatement(node) {
   var assignNode = node;
   assignNode.children = [];
-  console.log(node)
 
   if(list[start].name === "AssignStmt") {
     start++;
@@ -195,9 +172,6 @@ function saAssignmentStatement(node) {
 
   assignNode.appendChild(list[start]); //Grab variable to be assigned
   start++;
-  /*
-  */
-  console.log('START', list[start])
   var assLink = operationExpr("EndAssignStmt"); //Append sub-tree of components
   start++;
   assignNode.appendChild(assLink);
@@ -207,13 +181,16 @@ function saAssignmentStatement(node) {
 
 
 function saVarDecl(node) {
-  var varDeclNode = node//new stem(node.name, node.token);
-  start++ //Increment past VarDecl token
-  while(list[start].name !== "EndVarDecl") {
+  var varDeclNode = node
+  while(list[start-1].name !== "VarDecl") { //Find VarDecl Start
+    start++;
+  }
+
+  while(list[start].name !== "EndVarDecl") { //Add type and name
     varDeclNode.appendChild(list[start]);
     start++;
   }
-  start++;
+  //start++;
   current.appendChild(varDeclNode);
   current = varDeclNode;
 }
@@ -221,7 +198,6 @@ function saVarDecl(node) {
 
 function saWhileStatement(node) {
   var whileStmtNode = node;
-  console.log(node)
   /*
   if(list[start + 1].name !== "EndBooleanExpr") {
     console.log('check inc')

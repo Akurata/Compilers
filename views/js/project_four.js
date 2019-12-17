@@ -513,7 +513,6 @@ function generateBoolExpr(input, wrap) {
 
   var sideA = boolGroup.slice(0, comparatorIndex-1);
   var sideB = boolGroup.slice(comparatorIndex);
-  //console.log(sideA, sideB, needsOperation)
 
   //Generate addition functions if needed
   if(needsOperation.length > 0) {

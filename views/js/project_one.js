@@ -277,47 +277,47 @@ function notification(msg, from, align, type) {
 
 document.addEventListener('DOMContentLoaded', () => {
   document.querySelector('#input').value = `{
-    int a
-    a = 0
-    string z
-    z = "bond"
-    while (a != 9) {
-       if (a != 5) {
-           print("bond")
-       }
-       {
-           a = 1 + a
-           string b
-           b = "james bond"
-           print(b)
-       }
-    }
-    {}
-    boolean c
-    c = true
-    boolean d
-    int b
-    b = 7
-    d = (true == (true == false))
-    d = (a == b)
-    d = (1 == a)
-    d = (1 != 1)
-    d = ("string" == z)
-    d = (z != "string")
-    d = ("string" != "string")
-    if (d == true) {
-        int c
-        c = 1 + b
-        if (c == 1) {
-            print("ugh")
-        }
-    }
-    while ("string" == z) {
-        while (d == true) {
-            a = 1 + b
-        }
-    }
-}$`
+      int a
+      a = 0
+      string z
+      z = "bond"
+      while ("a" != 9) {
+         if ("a" != 5) {
+             print("bond")
+         }
+         {
+             a = 1 + a
+             string b
+             b = "james bond"
+             print(b)
+         }
+      }
+      {}
+      boolean c
+      c = true
+      boolean d
+      int b
+      b = 7
+      d = (true == (true == false))
+      d = (a == b)
+      d = (1 == a)
+      d = (1 != 1)
+      d = ("string" == z)
+      d = (z != "string")
+      d = ("string" != "string")
+      if (d == true) {
+          int c
+          c = 1 + b
+          if (c == 1) {
+              print("ugh")
+          }
+      }
+      while ("string" == z) {
+          while (d == true) {
+              a = 1 + b
+          }
+      }
+  }$`
 });
 /*
 
@@ -380,4 +380,6 @@ function resetAll() {
   codeScope = new ScopeTable();
   code = new Code();
   tempAddrCount = 0;
+  cst_err = false;
+  dfs_quotes = 0;
 }
