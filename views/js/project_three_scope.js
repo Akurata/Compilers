@@ -1,7 +1,6 @@
 
 var errs = false;
 function scopeCheck(id) {
-  console.log(ast)
   var currentScope = new scope();
   var scopeTree = currentScope;
   var varEntry;
@@ -15,7 +14,7 @@ function scopeCheck(id) {
         }else { //Else variable exists in current scope
           errs = true;
           console.log(list[i+1])
-          outputSA(`ERROR - Variable ${list[i+1].name} is already declared in this scope (${list[i+1].token.row}:${list[i+1].token.col}).`)
+          outputSA(`\nERROR - Variable ${list[i+1].name} is already declared in this scope (${list[i+1].token.row}:${list[i+1].token.col}).`)
         }
       }
     }else if(list[i].name === "Block") { //Create a new scope
@@ -25,7 +24,7 @@ function scopeCheck(id) {
     }else if(list[i].key === "ID") { //Check if program can access variable in scope
       if(!checkParentScopes(currentScope, list[i].name)) { //Check current + parent scopes for variable reference
         errs = true;
-        outputSA(`ERROR - Variable ${list[i].name} has been called before being initialized (${list[i].token.row}:${list[i].token.col}).`);
+        outputSA(`\nERROR - Variable ${list[i].name} has been called before being initialized (${list[i].token.row}:${list[i].token.col}).`);
       }
     }else if(list[i].name === "EndBlock") { //End current scope
       currentScope = currentScope.parentScope;
@@ -38,25 +37,26 @@ function scopeCheck(id) {
             if(find.type === "int") {
               if(list[subContext].key !== "DIGIT") {
                 errs = true;
-                outputSA(`ERROR - Type Mismatch for ${list[i].name} - expected typeof ${find.type} (${find.token.row}:${find.token.col})`);
+                outputSA(`\nERROR - Type Mismatch for ${list[i].name} - expected typeof ${find.type} (${find.token.row}:${find.token.col})`);
               }
             }else if(find.type === "string") {
               if(list[subContext].key !== "STRING") {
                 errs = true;
-                outputSA(`ERROR - Type Mismatch for ${list[i].name} - expected typeof ${find.type} (${find.token.row}:${find.token.col})`);
+                outputSA(`\nERROR - Type Mismatch for ${list[i].name} - expected typeof ${find.type} (${find.token.row}:${find.token.col})`);
               }
-            }else if(find.type === "boolean") {
-              if(list[subContext].name !== "false" || list[subContext].name !== "true") {
+            }/*else if(find.type === "boolean") {
+              if(list[subContext].key && !(list[subContext].name == "false" || list[subContext].name == "true" || list[subContext].name == "BooleanExpr" || list[subContext].name == "==" || list[subContext].name == "!=")) {
+                console.log(list[subContext])
                 errs = true;
-                outputSA(`ERROR - Type Mismatch for ${list[i].name} - expected typeof ${find.type} (${find.token.row}:${find.token.col})`);
+                outputSA(`\nERROR - Type Mismatch for ${list[i].name} - expected typeof ${find.type} (${find.token.row}:${find.token.col})`);
               }
-            }
+            }*/
           }
           subContext++;
         }
       }else {
         errs = true;
-        outputSA(`ERROR - Variable not declared in scope (${list[i].tokens.row}:${list[i].tokens.col})`)
+        outputSA(`\nERROR - Variable not declared in scope (${list[i].tokens.row}:${list[i].tokens.col})`)
       }
     }
   }

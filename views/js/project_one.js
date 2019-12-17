@@ -98,7 +98,8 @@ function lex(input) {
         col = 0;
         end++;
       }else {
-        if(lastToken.value === '\"') {
+        //console.log(start, end, p[start], lastToken.value)
+        if(p[start] === '\"') { //lastToken.value
           quotes++;
         }
 
@@ -275,7 +276,51 @@ function notification(msg, from, align, type) {
 }
 
 document.addEventListener('DOMContentLoaded', () => {
-  document.querySelector('#input').value = `
+  document.querySelector('#input').value = `{
+    int a
+    a = 0
+    string z
+    z = "bond"
+    while (a != 9) {
+       if (a != 5) {
+           print("bond")
+       }
+       {
+           a = 1 + a
+           string b
+           b = "james bond"
+           print(b)
+       }
+    }
+    {}
+    boolean c
+    c = true
+    boolean d
+    int b
+    b = 7
+    d = (true == (true == false))
+    d = (a == b)
+    d = (1 == a)
+    d = (1 != 1)
+    d = ("string" == z)
+    d = (z != "string")
+    d = ("string" != "string")
+    if (d == true) {
+        int c
+        c = 1 + b
+        if (c == 1) {
+            print("ugh")
+        }
+    }
+    while ("string" == z) {
+        while (d == true) {
+            a = 1 + b
+        }
+    }
+}$`
+});
+/*
+
 {
 	if (true == true) {
 		print("stringcheck")
@@ -284,9 +329,8 @@ document.addEventListener('DOMContentLoaded', () => {
 	if (true != false) {
 		print("noequal")
 	}
-}$`
-});
-/*
+}$
+
   `/* This statement shows that addition
 - checking and printing are both valid
 - options that can be performed. Credit: Tien
@@ -314,9 +358,6 @@ function resetAll() {
   document.querySelector('#output_sa_errors').innerHTML = "";
   document.querySelector('#output_code_log').innerHTML = "";
   document.querySelector('#output_code').innerHTML = "";
-  var jump = new JumpTable();
-  var static = new StaticTable();
-  var scope = new ScopeTable();
   var saWrap = document.querySelector('#output_symbol_table');
   while(saWrap.hasChildNodes()) {
     saWrap.removeChild(saWrap.firstChild);
@@ -334,4 +375,9 @@ function resetAll() {
   current = ast;
   scopes = [];
   refs = [];
+  cpu = new x6502();
+  jump = new JumpTable();
+  codeScope = new ScopeTable();
+  code = new Code();
+  tempAddrCount = 0;
 }

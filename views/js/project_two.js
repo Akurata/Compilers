@@ -384,7 +384,7 @@ function stringExpr() {
   if(result.isValid) {
     outputParse(`${indent(index)}SUCCESS - stringExpr()`);
     context--;
-    var strNode = new node('', 'StringExpr');
+    var strNode = new node('', 'StringExpr'); //, 'stem'
     strNode.appendChild(new node(result.nodes[0].token, result.nodes[0].token.value, 'leaf'));
     strNode.appendChild(result.nodes[1].node);
     strNode.appendChild(new node(result.nodes[2].token, result.nodes[2].token.value, 'leaf'));

@@ -117,7 +117,6 @@ class StaticTable {
   }
 
   add(varName, type, value) {
-    console.log(JSON.parse(JSON.stringify(codeScope)))
     if(!varName) {
       varName = `T${tempAddrCount}`
     }
@@ -272,7 +271,7 @@ var tempAddrCount = 0;
 
 function codeGen(ast) {
   var input = list;
-  console.log(Object.assign({}, input));
+  //console.log(Object.assign({}, input));
 
   while(input.length > 0) {
     switch(input.shift().name) {
@@ -419,7 +418,7 @@ function generatePrint(value) {
       buffer.push(value[i]);
     }
   }
-  console.log(buffer)
+  //console.log(buffer)
 
   if(buffer.length == 1) {
     //if string
@@ -462,7 +461,6 @@ function generatePrint(value) {
     if(buffer.find((a) => {return a.key == 'SYMBOL'}) != null) { //Addition input
 
       var result = generateAddition(null, buffer);
-      console.log(result)
 
       //load y register with var memory address
       code.addCode('AC');
@@ -515,7 +513,7 @@ function generateBoolExpr(input, wrap) {
 
   var sideA = boolGroup.slice(0, comparatorIndex-1);
   var sideB = boolGroup.slice(comparatorIndex);
-  console.log(sideA, sideB, needsOperation)
+  //console.log(sideA, sideB, needsOperation)
 
   //Generate addition functions if needed
   if(needsOperation.length > 0) {
@@ -661,7 +659,7 @@ function generateAddition(tag, expr) {
 
   for(var i = 0; i < expr.length; i++) {
     var item = expr[i];
-    console.log(item.key)
+    //console.log(item.key)
     if(item.key !== 'SYMBOL') {
       if(item.key === 'DIGIT') {
 
@@ -730,7 +728,6 @@ function replaceTempAddr() {
   code.addCode('00', 'Empty Space', true);
 
   var heap = code.value().length;
-  console.log(heap.toString(16))
 
   //Replace Jump Table entries
   Object.keys(jump.contents).forEach((entry) => {
@@ -747,14 +744,12 @@ function replaceTempAddr() {
       var newAddr;
 
       newAddr = (heap).toString(16).toUpperCase();
-      console.log(heap, newAddr.toString(16).toUpperCase())
       newAddr = (newAddr.length < 2 ? `0${newAddr}` : newAddr);
 
 
       if(typeof item.value == 'object') {
         item.value.forEach((char) => {
           code.addCode((char == '00') ? '00' : char.charCodeAt(0).toString(16).toUpperCase(), null, true);
-          console.log(heap.toString(16), char.charCodeAt(0).toString(16).toUpperCase());
           heap++;
         });
       }else {
@@ -764,9 +759,6 @@ function replaceTempAddr() {
 
       code.replace(item.tempAddress, newAddr);
       document.querySelector('#output_code').innerHTML = document.querySelector('#output_code').innerHTML.replace(new RegExp(item.tempAddress, 'g'), newAddr);
-
-      console.log(item, newAddr)
-
     });
   });
 
